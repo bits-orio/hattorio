@@ -1,10 +1,11 @@
--- Preview the mod as it will appear in game: hat cells rasterised onto
--- Factorio's square tile grid, with unbuildable bands between them.
+-- Shows how the mod looks in the game: hat cells rasterised onto Factorio's
+-- square tile grid, with unbuildable bands between them.
 --
 --   lua5.2 tools/render_bands.lua [hat-size] [band] [tiles] [out.svg]
 --
--- hat-size is centre-to-vertex in tiles (the planned startup setting).
--- Everything here is what terrain/bands.lua will do at chunk generation.
+-- hat-size is the distance from the centre to a vertex, in tiles (the cell
+-- size startup setting). This script does what mod/bands.lua does at chunk
+-- generation.
 
 package.path = "./?.lua;" .. package.path
 
@@ -21,9 +22,9 @@ local land_c = arg[6] or "#7a8b5a"        -- surrounding land
 local unit = Ti.unit_for_hat_size(size)
 local half = band / 2
 
--- coverage() is the root metatile's CIRCUMRADIUS, and the root is a hexagon,
--- so a square window inscribed in that circle is not fully inside it. Ask for
--- well over the window's half-diagonal.
+-- coverage() is the CIRCUMRADIUS of the root metatile, and the root is a
+-- hexagon. So a square window inside that circle is not fully inside the
+-- root. Ask for well above the half-diagonal of the window.
 local t = Ti.new({ unit = unit, cover = tiles * 2 })
 
 local lo = -math.floor(tiles / 2)
@@ -32,7 +33,7 @@ local pad = band + 2
 local hats = t:hats_in_box({ left = lo - pad, top = lo - pad,
                              right = hi + pad, bottom = hi + pad })
 
--- cache each hat's edges once
+-- calculate the edges of each hat once and cache them
 local edges = {}
 for i, h in ipairs(hats) do edges[i] = G.edges(h.xf, unit) end
 

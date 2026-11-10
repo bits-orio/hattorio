@@ -22,7 +22,7 @@ def test_h_has_exactly_one_reflected_hat():
 
 
 def test_level0_placements_contain_no_phi():
-    # phi enters only via the substitution. Level-0 must be phi-free.
+    # phi comes in only through the substitution. Level 0 must have no phi.
     for mt in level0().values():
         for ch in mt.children:
             for k in ch.xf.m:

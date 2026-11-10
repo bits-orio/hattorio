@@ -1,51 +1,52 @@
 # Building in hats
 
-Practical notes for your first base. None of this is enforced by the mod —
-it is just what the shape of the ground pushes you toward.
+These are practical notes for your first base. The mod does not enforce any
+of them. The shape of the ground pushes you this way.
 
-## Start by looking, not building
+## Look before you build
 
-Cells differ. Before committing to a spawn area, open the map and find a
-cluster of cells that sit well together — some neighbours share long edges,
-others meet at awkward points. A good starting cluster is worth walking for.
+Cells are all different. Before you choose a spawn area, open the map and find
+a group of cells that fit well together. Some neighbours share long edges.
+Others meet at awkward points. A good starting group is worth the walk.
 
 ## Think in cells, not in a bus
 
-A main bus assumes you can run parallel lines indefinitely. You cannot. What
-works instead is treating each cell as a small factory with a job, and moving
-items between them.
+A main bus needs parallel lines that run as far as you want. Here they cannot.
+Treat each cell as a small factory with one job, and move items between the
+cells.
 
-That makes the awkward part the *connections*, which is where the mod puts
-the interesting decisions.
+The hard part is then the *connections*. The mod puts the interesting
+decisions there.
 
 ## Crossing bands
 
-- **Underground belts and pipes** tunnel under bands. This is the intended
-  route and the main thing you will build.
-- **Rails** are exempt and cross freely. Trains work normally — for anything
-  at distance, rails are far less painful than belts.
-- **Power poles** ignore the ground entirely. Power is never the problem.
-- **Bots** fly over everything. Once you have logistics bots, a lot of the
-  constraint softens — this is intended, and it arrives with normal progression.
+- **Underground belts and pipes** go under bands. This is the intended route,
+  and you will build it the most.
+- **Rails** are exempt and cross bands freely. Trains work normally. Over long
+  distances, rails are much easier than belts.
+- **Power poles** ignore the ground. Power is never the problem.
+- **Bots** fly over everything. When you have logistics bots, the constraint
+  becomes much weaker. This is intended, and bots arrive with normal
+  progression.
 
 ## What to blueprint
 
 Blueprint the things that fit inside the largest square your settings allow
-(17×17 at the default). Those work everywhere:
+(17×17 at the default). Those blueprints work everywhere:
 
 - an assembler with its inserters and a short belt
 - a splitter or balancer block
 - a small power or radar block
 
-Do not try to blueprint a whole cell. It will fit exactly one cell, and you
-have 884 other shapes to go.
+Do not blueprint a whole cell. The blueprint will fit exactly one cell, and
+884 other shapes remain.
 
-## Things that catch people out
+## Common mistakes
 
-- **Mining drills need a clear 3×3.** Ore under a band is not minable. Check
-  before you plan a patch.
-- **Bands are walkable.** They look like a wall and are not one. You can
-  always get there.
-- **Reflected cells.** About 1 in 8 cells is a mirror image, and no amount of
-  rotation makes it match the others. This is a mathematical property of the
-  tiling, not a bug — mirrored tiles are provably unavoidable.
+- **Mining drills need a clear 3×3 area.** You cannot mine ore under a band.
+  Check this before you plan a patch.
+- **You can walk on bands.** They look like a wall, but they are not one. You
+  can always reach a cell.
+- **Reflected cells.** About 1 cell in 8 is a mirror image. No rotation makes
+  it match the others. This is a mathematical property of the tiling, not a
+  bug: it is proven that mirrored tiles are necessary.

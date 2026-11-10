@@ -1,2 +1,3 @@
-Hattorio is MIT licensed. The hat monotile was discovered by Smith, Myers,
-Kaplan and Goodman-Strauss (2023).
+<!-- markdownlint-disable-file MD041 -->
+Hattorio is MIT licensed. Smith, Myers, Kaplan and Goodman-Strauss discovered
+the hat monotile in 2023.

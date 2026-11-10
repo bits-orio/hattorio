@@ -10,7 +10,8 @@ def test_fixed_point_holds_exactly():
 
 
 def test_rule_coefficients_are_small():
-    # per-level rules reach 4.8e26 by level 12; the self-similar set must not.
+    # the rules for each level reach 4.8e26 by level 12. The self-similar set
+    # must not.
     assert max_rule_coefficient() < 1000
 
 
@@ -31,5 +32,6 @@ def test_denominators_divide_100():
 
 @pytest.mark.slow
 def test_constants_rederive_from_the_substitution():
-    """The constants are recovered, not invented. Slow: re-runs recognition."""
+    """The constants are recovered, not invented. Slow: runs the recognition
+    again."""
     assert rederive_outlines() == LIMIT_OUTLINES

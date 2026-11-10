@@ -3,18 +3,18 @@
 --   xf = { a, b, c, d, e, f }
 --   (x, y) -> (a*x + b*y + c, d*x + e*y + f)
 --
--- DETERMINISM. Only + - * / and sqrt appear here. IEEE-754 requires those to
--- be correctly rounded, so they are bit-identical across platforms, and Lua's
--- interpreter runs each as its own VM instruction, so no compiler FMA
--- contraction can fuse them. Factorio 2.0 is x86-64 only, so there is no x87
--- 80-bit excess precision either. What must NEVER appear is math.sin,
--- math.cos, math.random or the ^ operator -- those differ between platforms
--- and a divergence between two clients is a desync.
+-- DETERMINISM. This file uses only + - * / and sqrt. IEEE-754 requires these
+-- operations to be correctly rounded, so they give identical bits on every
+-- platform. The Lua interpreter runs each one as a separate VM instruction, so
+-- no compiler can contract two of them into an FMA. Factorio 2.0 runs only on
+-- x86-64, so there is no x87 80-bit excess precision either. This file must
+-- NEVER use math.sin, math.cos, math.random or the ^ operator. Their results
+-- differ between platforms, and a difference between two clients is a desync.
 --
--- ACCURACY. Measured against exact Z[phi][sqrt3] ground truth from the offline
--- pipeline, composition holds relative error at machine epsilon (5e-16) with
--- no growth in depth: at depth 12, covering 1.19e6 tiles, the absolute error
--- is 4e-10 tiles.
+-- ACCURACY. We measured composition against exact Z[phi][sqrt3] values from
+-- the offline pipeline. The relative error stays at machine epsilon (5e-16)
+-- and does not grow with depth. At depth 12, which covers 1.19e6 tiles, the
+-- absolute error is 4e-10 tiles.
 --
 -- Immutable: every operation returns a new table.
 

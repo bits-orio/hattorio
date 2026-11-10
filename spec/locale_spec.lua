@@ -1,12 +1,13 @@
--- Guards on the locale files.
+-- Checks on the locale files.
 --
--- These failures are all silent in-game: a mangled value shows as truncated
--- text, a mangled key shows as the raw key like
--- "hattorio-band-colour-violet". None of them crash, so none of them announce
--- themselves.
+-- In the game, all of these failures are silent. A damaged value shows as
+-- truncated text. A damaged key shows as the raw key, for example
+-- "hattorio-band-colour-violet". None of them crash the game, so none of them
+-- are easy to notice.
 
 local function locale_files()
-  -- busted runs from the repo root, and there is only the one language today
+  -- busted runs from the repository root, and today there is only one
+  -- language
   return { "locale/en/hattorio.cfg" }
 end
 
@@ -19,10 +20,11 @@ end
 
 describe("locale", function()
   it("never puts a semicolon in a value", function()
-    -- Factorio's .cfg format documents ';' as a comment marker. Whether it is
-    -- honoured mid-line is undocumented, and vanilla never risks it: zero of
-    -- 7,301 vanilla English values contain one, while '#' appears four times.
-    -- Cheaper to avoid than to depend on.
+    -- The documentation of Factorio's .cfg format says that ';' starts a
+    -- comment. It does not say if this also applies in the middle of a line,
+    -- and vanilla never takes the risk: none of the 7,301 vanilla English
+    -- values contain ';', but '#' appears four times. It is cheaper to avoid
+    -- ';' than to depend on it.
     for _, path in ipairs(locale_files()) do
       local n = 0
       for line in read(path):gmatch("[^\n]+") do
@@ -36,8 +38,8 @@ describe("locale", function()
   end)
 
   it("has no whitespace around the equals sign in keys", function()
-    -- "title =Value" defines the key "title " with a trailing space, which
-    -- then never matches. Factorio gives no warning.
+    -- "title =Value" defines the key "title " with a trailing space, and that
+    -- key never matches. Factorio gives no warning.
     for _, path in ipairs(locale_files()) do
       local n = 0
       for line in read(path):gmatch("[^\n]+") do

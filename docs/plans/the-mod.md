@@ -1,44 +1,63 @@
-# Hattorio Mod Implementation Plan
+# Hattorio mod implementation plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use
+> superpowers:subagent-driven-development (recommended) or
+> superpowers:executing-plans to implement this plan task by task. The steps
+> use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Turn the finished tiling core into a playable Factorio mod: hat-shaped buildable cells separated by unbuildable bands.
+**Goal:** Turn the finished tiling core into a Factorio mod that people can
+play: buildable cells in the shape of hats, with unbuildable bands between
+them.
 
-**Architecture:** Band tiles carry a custom collision layer that buildings collide with and the character does not, so construction is blocked natively rather than by script rejection. Terrain is painted once at chunk generation from the tiling core. Everything derivable is derived; `storage` holds only per-surface geometry and a band bitmap cache.
+**Architecture:** The band tiles have a custom collision layer. Buildings
+collide with it and the character does not, so the game blocks construction
+natively and no script has to reject it. The mod paints the terrain once, at
+chunk generation, from the tiling core. The mod derives everything that it
+can derive. `storage` holds only the geometry for each surface and a cache of
+band bitmaps.
 
-**Tech Stack:** Factorio 2.0.77, Lua 5.2.1, busted, luacheck. Consumes `hat/` from Plan 1.
+**Tech stack:** Factorio 2.0.77, Lua 5.2.1, busted, luacheck. Uses `hat/`
+from plan 1.
 
 **Spec:** `docs/design/hattorio-design.md`
 
-## Global Constraints
+## Global constraints
 
-- **Factorio 2.0.77** stable; `info.json` declares `factorio_version = "2.0"` (loads on 2.0 and 2.1).
-- **Lua 5.2.1.** No integer subtype; all numbers are doubles.
-- **Never use `math.sin`, `math.cos`, `math.random` or `^` in shipped Lua** — not bit-identical across platforms, and a divergence is a desync. `+ - * /` and `sqrt` are safe.
-- **`hat/` must keep zero Factorio dependencies.** New mod code goes in `mod/`, never inside `hat/`.
-- **Defaults: hat size 26, band width 2**, per planet, startup settings, range 15-90 and 1-6.
-- **Geometry is stored per surface at creation.** A later settings change must affect only new surfaces.
-- **Bands are permanent.** No tech, item or mechanic removes them.
-- **Rails are exempt** and cross bands. Undergrounds tunnel beneath. Power and bots are unaffected.
-- Generated files keep their `-- GENERATED` header; regenerate with `make data`.
+- **Factorio 2.0.77** stable. `info.json` declares
+  `factorio_version = "2.0"`, which loads on 2.0 and 2.1.
+- **Lua 5.2.1.** There is no integer subtype. All numbers are doubles.
+- **Never use `math.sin`, `math.cos`, `math.random` or `^` in shipped Lua.**
+  They do not give identical bits on all platforms, and a difference is a
+  desync. `+ - * /` and `sqrt` are safe.
+- **`hat/` must keep zero Factorio dependencies.** New mod code goes in
+  `mod/`, never in `hat/`.
+- **Defaults: hat size 26, band width 2**, per planet, as startup settings,
+  with ranges 15-90 and 1-6.
+- **The mod stores the geometry for each surface when it creates the
+  surface.** A later change to the settings must affect only new surfaces.
+- **Bands are permanent.** No technology, item or mechanic removes them.
+- **Rails are exempt** and cross bands. Undergrounds go under them. Bands do
+  not affect power or bots.
+- Generated files keep their `-- GENERATED` header. Regenerate them with
+  `make data`.
 
-## What is and is not testable here
+## What we can and cannot test here
 
-Plan 1 was almost entirely unit-testable. This plan is not, and pretending
-otherwise would be worse than saying so.
+We could unit test almost all of plan 1. We cannot do that for this plan, and
+it is better to say so than to pretend.
 
-- **Testable under busted** (no Factorio): settings validation, per-surface
-  geometry derivation, band rasterisation. Tasks 3, 5, 6 push as much logic as
-  possible into these pure modules.
-- **Not testable without the game**: prototypes loading, collision masks
-  actually blocking, chunk events firing, desync behaviour. Tasks 2, 4, 7, 9
-  and 10 end in an explicit **in-game checklist** instead of an assertion.
-  Those checklists are the deliverable — do not mark such a task done on the
-  basis that the code looks right.
+- **We can test under busted** (without Factorio): settings validation, the
+  geometry for each surface and band rasterisation. Tasks 3, 5 and 6 put as
+  much logic as possible into these pure modules.
+- **We cannot test without the game:** prototypes that load, collision masks
+  that really block, chunk events that fire, and desync behaviour. Tasks 2,
+  4, 7, 9 and 10 end with an explicit **in-game checklist** and not with an
+  assertion. Those checklists are the deliverable. Do not mark such a task
+  done only because the code looks right.
 
 ## File structure
 
-```
+```text
 info.json                     mod manifest
 changelog.txt                 Factorio's strict changelog format
 thumbnail.png                 144x144, generated from the tiling renderer
@@ -62,25 +81,30 @@ spec/config_spec.lua          busted
 spec/bands_spec.lua           busted
 ```
 
-The split that matters: `mod/config.lua` and `mod/bands.lua` have **no
-Factorio API calls**, so they run under plain Lua in CI like `hat/` does.
-`mod/surface.lua` and `mod/terrain.lua` are the shell that touches the game.
+The important split is this: `mod/config.lua` and `mod/bands.lua` make **no
+calls to the Factorio API**, so they run under plain Lua in CI, the same as
+`hat/`. `mod/surface.lua` and `mod/terrain.lua` are the shell that talks to
+the game.
 
 ---
 
 ### Task 1: Mod skeleton
 
 **Files:**
-- Create: `info.json`, `changelog.txt`, `data.lua`, `control.lua`, `settings.lua`, `locale/en/hattorio.cfg`
+
+- Create: `info.json`, `changelog.txt`, `data.lua`, `control.lua`,
+  `settings.lua`, `locale/en/hattorio.cfg`
 - Modify: `.github/workflows/check.yml`
 
 **Interfaces:**
+
 - Consumes: nothing
-- Produces: a mod directory Factorio will load
+- Produces: a mod directory that Factorio will load
 
 - [ ] **Step 1: Write the manifest**
 
 `info.json`:
+
 ```json
 {
   "name": "hattorio",
@@ -93,10 +117,10 @@ Factorio API calls**, so they run under plain Lua in CI like `hat/` does.
 }
 ```
 
-`changelog.txt` — Factorio's format is strict: exactly 99 dashes, two-space
-indent for `Date:` and category, four for entries.
+`changelog.txt`: Factorio's format is strict. It needs exactly 99 dashes, an
+indent of two spaces for `Date:` and the category, and four for the entries.
 
-```
+```text
 ---------------------------------------------------------------------------------------------------
 Version: 0.1.0
 Date: 2026-09-20
@@ -109,27 +133,32 @@ Date: 2026-09-20
 - [ ] **Step 2: Write the entry points**
 
 `data.lua`:
+
 ```lua
 require("prototypes.collision")
 require("prototypes.tiles")
 ```
 
 `data-final-fixes.lua`:
+
 ```lua
 require("prototypes.patch")
 ```
 
 `settings.lua`:
+
 ```lua
 require("prototypes.settings")
 ```
 
 `control.lua`:
+
 ```lua
 require("mod.terrain")
 ```
 
 `locale/en/hattorio.cfg`:
+
 ```ini
 [mod-setting-name]
 hattorio-hat-size-nauvis=Cell size (Nauvis)
@@ -143,18 +172,21 @@ hattorio-band-width-nauvis=Width of the unbuildable band between cells, in tiles
 - [ ] **Step 3: Validate the manifest**
 
 Run:
+
 ```bash
 python3 -c "import json; d=json.load(open('info.json')); \
   assert d['factorio_version']=='2.0'; \
   assert all(k in d for k in ('name','version','title','author','description','dependencies')); \
   print('info.json ok:', d['name'], d['version'])"
 ```
+
 Expected: `info.json ok: hattorio 0.1.0`
 
 - [ ] **Step 4: Add the manifest check to CI**
 
-In `.github/workflows/check.yml`, under the `pipeline` job, after the pytest
+In `.github/workflows/check.yml`, in the `pipeline` job, after the pytest
 step:
+
 ```yaml
       - name: validate info.json
         run: python3 -c "import json; json.load(open('info.json'))"
@@ -171,25 +203,34 @@ git commit -m "feat(mod): manifest, entry points and locale"
 
 ### Task 2: Collision layer and band tiles
 
-Blocking is native, not script-enforced. A custom collision layer on the band
-tile, present in buildings' masks but absent from the character's and from
-vehicles', means the game itself refuses the placement: red preview,
-blueprints skip those tiles, bots never try. Script rejection would place the
-entity and then remove it, and would leave ghosts for bots to retry forever.
+The game blocks construction natively, not through a script. The band tile
+has a custom collision layer. Building masks include that layer, and the
+masks of the character and of vehicles do not. So the game itself refuses
+the placement: the preview is red, blueprints skip those tiles, and bots
+never try. Rejection in a script would place the entity and then remove it,
+and it would leave ghosts that bots try to build again for ever.
 
 **Files:**
-- Create: `prototypes/collision.lua`, `prototypes/tiles.lua`, `mod/planets.lua`
+
+- Create: `prototypes/collision.lua`, `prototypes/tiles.lua`,
+  `mod/planets.lua`
 
 **Interfaces:**
+
 - Consumes: nothing
 - Produces:
-  - collision layer named `hattorio_band`
+  - a collision layer called `hattorio_band`
   - tiles `hattorio-band-<planet>` and `hattorio-band-<planet>-mirror`
-  - `mod/planets.lua` returning `{ [name] = { base_tile = <string>, map_color = {r,g,b}, mirror_color = {r,g,b} } }`
+  - `mod/planets.lua`, which returns this table:
+
+    ```lua
+    { [name] = { base_tile = <string>, map_color = {r,g,b}, mirror_color = {r,g,b} } }
+    ```
 
 - [ ] **Step 1: Declare the collision layer**
 
 `prototypes/collision.lua`:
+
 ```lua
 -- A layer the band tiles carry and buildings are given in data-final-fixes.
 -- Two prototypes collide only if they share a layer, so the character and
@@ -202,6 +243,7 @@ data:extend({
 - [ ] **Step 2: Declare the planet palette**
 
 `mod/planets.lua`:
+
 ```lua
 -- Which surfaces get tiled, and what the band looks like there.
 -- base_tile is a vanilla tile whose graphics and transitions are cloned;
@@ -223,6 +265,7 @@ return {
 - [ ] **Step 3: Generate the tile prototypes**
 
 `prototypes/tiles.lua`:
+
 ```lua
 local planets = require("mod.planets")
 
@@ -255,20 +298,20 @@ end
 data:extend(tiles)
 ```
 
-- [ ] **Step 4: In-game check — this cannot be unit tested**
+- [ ] **Step 4: In-game check (you cannot unit test this)**
 
-Launch Factorio with the mod enabled and confirm, in order:
+Start Factorio with the mod enabled and check these points in order:
 
 1. The game **loads without a prototype error**. A missing required field
    (`collision_mask`, `layer`, `variants`, `map_color`) fails here.
-2. In the editor, `/c game.player.surface.set_tiles{{name="hattorio-band-nauvis", position={0,0}}}`
-   places a tile.
-3. Standing next to it, you **can walk onto it**.
-4. Holding an assembling machine over it shows a **red placement preview** and
-   the build is refused.
+2. In the editor, this command places a tile:
+   `/c game.player.surface.set_tiles{{name="hattorio-band-nauvis", position={0,0}}}`
+3. From a position next to the tile, you **can walk onto it**.
+4. When you hold an assembling machine over the tile, the **placement
+   preview is red** and the game refuses the build.
 
-If 4 fails, the entity masks have not been patched yet — that is Task 4.
-Do not proceed until 1-3 pass.
+If point 4 fails, the entity masks are not patched yet. Task 4 does that. Do
+not continue until points 1 to 3 pass.
 
 - [ ] **Step 5: Commit**
 
@@ -282,13 +325,16 @@ git commit -m "feat(mod): band collision layer and per-planet band tiles"
 ### Task 3: Settings prototypes and pure validation
 
 **Files:**
+
 - Create: `prototypes/settings.lua`, `mod/config.lua`
 - Test: `spec/config_spec.lua`
 
 **Interfaces:**
+
 - Consumes: `mod/planets.lua`, `hat/tiling.lua`
 - Produces (`mod/config.lua`):
-  - `Config.MIN_SIZE = 15`, `Config.MAX_SIZE = 90`, `Config.MIN_BAND = 1`, `Config.MAX_BAND = 6`
+  - `Config.MIN_SIZE = 15`, `Config.MAX_SIZE = 90`, `Config.MIN_BAND = 1`,
+    `Config.MAX_BAND = 6`
   - `Config.DEFAULT_SIZE = 26`, `Config.DEFAULT_BAND = 2`
   - `Config.clamp(size, band) -> size, band`
   - `Config.geometry(size, band) -> { size=, band=, unit=, depth=, half= }`
@@ -297,6 +343,7 @@ git commit -m "feat(mod): band collision layer and per-planet band tiles"
 - [ ] **Step 1: Write the failing test**
 
 `spec/config_spec.lua`:
+
 ```lua
 local Config = require("mod.config")
 local Ti = require("hat.tiling")
@@ -356,7 +403,7 @@ describe("config", function()
 end)
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [ ] **Step 2: Run the test and check that it fails**
 
 Run: `make test`
 Expected: FAIL, `module 'mod.config' not found`
@@ -364,6 +411,7 @@ Expected: FAIL, `module 'mod.config' not found`
 - [ ] **Step 3: Implement**
 
 `mod/config.lua`:
+
 ```lua
 -- Pure: settings numbers in, geometry numbers out. No Factorio API here, so
 -- this runs under plain Lua in CI.
@@ -415,7 +463,7 @@ end
 return Config
 ```
 
-- [ ] **Step 4: Run it to verify it passes**
+- [ ] **Step 4: Run the test and check that it passes**
 
 Run: `make test`
 Expected: all green, 8 new successes.
@@ -423,6 +471,7 @@ Expected: all green, 8 new successes.
 - [ ] **Step 5: Generate the settings prototypes**
 
 `prototypes/settings.lua`:
+
 ```lua
 local planets = require("mod.planets")
 
@@ -456,9 +505,10 @@ end
 data:extend(settings_list)
 ```
 
-The bounds are duplicated here rather than required from `mod/config.lua`
-because the settings stage cannot `require` a module that pulls in
-`hat/tiling.lua`'s data files. A test in Task 3 keeps them honest — add it now:
+The bounds are copied here and not loaded from `mod/config.lua`. The reason
+is that the settings stage cannot `require` a module that loads the data files
+of `hat/tiling.lua`. A test in task 3 makes sure that the copies stay the
+same. Add it now:
 
 ```lua
   it("matches the bounds declared in prototypes/settings.lua", function()
@@ -484,15 +534,18 @@ git commit -m "feat(mod): startup settings and pure geometry derivation"
 ### Task 4: Patch entity collision masks
 
 **Files:**
+
 - Create: `prototypes/patch.lua`
 
 **Interfaces:**
-- Consumes: the `hattorio_band` collision layer from Task 2
+
+- Consumes: the `hattorio_band` collision layer from task 2
 - Produces: every buildable structure collides with `hattorio_band`
 
 - [ ] **Step 1: Write the patch**
 
 `prototypes/patch.lua`:
+
 ```lua
 -- data-final-fixes, so this sees every entity every other mod added.
 --
@@ -536,22 +589,24 @@ end
 log("hattorio: added " .. layer .. " to " .. patched .. " entity prototypes")
 ```
 
-- [ ] **Step 2: In-game check — this cannot be unit tested**
+- [ ] **Step 2: In-game check (you cannot unit test this)**
 
-Launch Factorio and confirm:
+Start Factorio and check these points:
 
-1. The game loads, and the log contains `hattorio: added hattorio_band to N
-   entity prototypes` with N in the hundreds. Zero means `data.raw` type names
-   are wrong or masks lack a `layers` table.
-2. Place a band tile as in Task 2. An assembling machine over it shows a red
-   preview and cannot be placed. A transport belt likewise.
-3. **A rail can be placed across it.** If not, a rail type crept into
-   `BLOCKED_TYPES`.
-4. **You can still walk and drive across it.**
-5. An underground belt placed on the cell either side, spanning the band,
-   connects.
-6. Stamping a blueprint over a band places entities on the cells and **silently
-   skips** the band tiles, leaving no ghosts there.
+1. The game loads, and the log contains
+   `hattorio: added hattorio_band to N entity prototypes`, with N in the
+   hundreds. Zero means that the `data.raw` type names are wrong or that the
+   masks have no `layers` table.
+2. Place a band tile as in task 2. An assembling machine over the tile shows a
+   red preview, and you cannot place it. The same is true for a transport
+   belt.
+3. **You can place a rail across the tile.** If you cannot, a rail type got
+   into `BLOCKED_TYPES` by mistake.
+4. **You can still walk and drive across the tile.**
+5. Put an underground belt on the cell at each side of the band, so that it
+   spans the band. The pair connects.
+6. Stamp a blueprint over a band. The game places entities on the cells and
+   **skips** the band tiles without a message. No ghosts remain on the band.
 
 - [ ] **Step 3: Commit**
 
@@ -562,22 +617,27 @@ git commit -m "feat(mod): give buildable structures the band collision layer"
 
 ---
 
-### Task 5: Per-surface geometry
+### Task 5: Geometry for each surface
 
 **Files:**
+
 - Create: `mod/surface.lua`
 
 **Interfaces:**
+
 - Consumes: `mod/config.lua`, `mod/planets.lua`
 - Produces:
-  - `Surface.get(surface) -> geometry|nil` — nil for surfaces this mod ignores
-  - `Surface.init(surface) -> geometry|nil` — derive and store once
+  - `Surface.get(surface) -> geometry|nil`: nil for surfaces that this mod
+    ignores
+  - `Surface.init(surface) -> geometry|nil`: derives and stores the geometry
+    once
   - `Surface.is_tiled(surface) -> boolean`
-  - geometry is `{ size, band, unit, depth, half, tile, mirror_tile }`
+  - the geometry is `{ size, band, unit, depth, half, tile, mirror_tile }`
 
 - [ ] **Step 1: Write the implementation**
 
 `mod/surface.lua`:
+
 ```lua
 -- Per-surface geometry, stored once at creation.
 --
@@ -632,9 +692,10 @@ return Surface
 
 1. Start a new game. `/c game.print(serpent.line(storage.surfaces))` shows an
    entry for Nauvis with `size = 26`, `band = 2` and a `depth`.
-2. Quit, change the cell size setting to 41, reload the **same save**.
-   `storage.surfaces` still reports 26 — existing surfaces keep their geometry.
-3. Create a new surface (or new game) and it reports 41.
+2. Quit, change the cell size setting to 41 and load the **same save** again.
+   `storage.surfaces` still shows 26, because existing surfaces keep their
+   geometry.
+3. Create a new surface (or a new game). It shows 41.
 
 - [ ] **Step 3: Commit**
 
@@ -647,22 +708,26 @@ git commit -m "feat(mod): per-surface geometry stored at creation"
 
 ### Task 6: Band rasterisation
 
-The hot path, and the one piece of mod logic that is fully testable.
+This is the hot path. It is also the one part of the mod logic that we can
+test fully.
 
 **Files:**
+
 - Create: `mod/bands.lua`
 - Test: `spec/bands_spec.lua`
 
 **Interfaces:**
+
 - Consumes: `hat/tiling.lua`, `hat/geometry.lua`
 - Produces:
-  - `Bands.for_area(tiling, geom, area) -> { {x=,y=,mirror=<boolean>}, ... }`
-    where `area = { left=, top=, right=, bottom= }` in tile coordinates and
-    the result lists every band tile in it
+  - `Bands.for_area(tiling, geom, area) -> { {x=,y=,mirror=<boolean>}, ... }`,
+    where `area = { left=, top=, right=, bottom= }` is in tile coordinates.
+    The result lists every band tile in the area.
 
 - [ ] **Step 1: Write the failing test**
 
 `spec/bands_spec.lua`:
+
 ```lua
 local Ti = require("hat.tiling")
 local Config = require("mod.config")
@@ -736,7 +801,7 @@ describe("band rasterisation", function()
 end)
 ```
 
-- [ ] **Step 2: Run it to verify it fails**
+- [ ] **Step 2: Run the test and check that it fails**
 
 Run: `make test`
 Expected: FAIL, `module 'mod.bands' not found`
@@ -744,6 +809,7 @@ Expected: FAIL, `module 'mod.bands' not found`
 - [ ] **Step 3: Implement**
 
 `mod/bands.lua`:
+
 ```lua
 -- Which tiles of an area fall on a band.
 --
@@ -804,7 +870,7 @@ end
 return Bands
 ```
 
-- [ ] **Step 4: Run it to verify it passes**
+- [ ] **Step 4: Run the test and check that it passes**
 
 Run: `make test`
 Expected: all green, 6 new successes.
@@ -821,15 +887,18 @@ git commit -m "feat(mod): band rasterisation, pure and tested"
 ### Task 7: Paint terrain at chunk generation
 
 **Files:**
+
 - Create: `mod/terrain.lua`
 
 **Interfaces:**
+
 - Consumes: `mod/surface.lua`, `mod/bands.lua`, `hat/tiling.lua`
-- Produces: `on_chunk_generated` handler that paints bands
+- Produces: an `on_chunk_generated` handler that paints bands
 
 - [ ] **Step 1: Write the handler**
 
 `mod/terrain.lua`:
+
 ```lua
 local Ti = require("hat.tiling")
 local Surface = require("mod.surface")
@@ -901,28 +970,36 @@ script.on_load(function()
 end)
 ```
 
-- [ ] **Step 2: In-game check — the core deliverable**
+- [ ] **Step 2: In-game check (the core deliverable)**
 
-Start a **new** game on Nauvis and confirm:
+Start a **new** game on Nauvis and check these points:
 
-1. Terrain generates with visible hat cells separated by dark bands.
-2. **Bands do not break at chunk boundaries.** Walk along one across several
-   chunks; any discontinuity means chunk-local state leaked in.
-3. **Lakes survive.** No band is painted across water and shores look normal.
-4. Ore patches are sliced by bands but keep their ore.
-5. `/c game.print(game.surfaces[1].count_tiles_filtered{name="hattorio-band-nauvis"})`
-   returns a plausible count.
-6. Open the map view: the aperiodic structure is visible and obviously
-   non-repeating.
+1. The terrain generates with visible hat cells and dark bands between them.
+2. **Bands do not break at chunk boundaries.** Walk along a band across
+   several chunks. Any break means that state from a single chunk got into
+   the calculation.
+3. **Lakes stay.** The mod paints no band across water, and the shores look
+   normal.
+4. Bands cut through ore patches, but the patches keep their ore.
+5. This command returns a plausible count:
+   `/c game.print(game.surfaces[1].count_tiles_filtered{name="hattorio-band-nauvis"})`
+6. Open the map view. You can see the aperiodic structure, and it clearly
+   does not repeat.
 
-- [ ] **Step 3: Measure UPS cost**
+- [ ] **Step 3: Measure the UPS cost**
 
-With the game running, `/c local t=game.create_profiler() game.player.force.chart(game.surfaces[1], {{-512,-512},{512,512}}) t.stop() game.print(t)`
-then check that chunk generation does not stall visibly. The descent measured
-0.73 ms/chunk standalone; rasterisation adds to that.
+While the game runs, enter this command:
 
-If generation is visibly slow, the likely cause is `is_paveable` calling
-`get_tile` per tile. Cache the chunk's tiles in one call instead.
+```text
+/c local t=game.create_profiler() game.player.force.chart(game.surfaces[1], {{-512,-512},{512,512}}) t.stop() game.print(t)
+```
+
+Then check that chunk generation does not visibly stall. The descent alone
+took 0.73 ms per chunk in measurement. Rasterisation adds to that.
+
+If generation is visibly slow, the probable cause is that `is_paveable` calls
+`get_tile` for each tile. Get all the tiles of the chunk in one call and
+cache them.
 
 - [ ] **Step 4: Commit**
 
@@ -936,14 +1013,17 @@ git commit -m "feat(mod): paint bands at chunk generation"
 ### Task 8: Compensate resource richness
 
 **Files:**
+
 - Modify: `mod/terrain.lua`
 
 **Interfaces:**
+
 - Consumes: `Config.richness_multiplier`
 
 - [ ] **Step 1: Add the handler**
 
-Append to `mod/terrain.lua`:
+Add this to the end of `mod/terrain.lua`:
+
 ```lua
 local Config = require("mod.config")
 
@@ -970,7 +1050,8 @@ local function compensate_resources(surface, area)
 end
 ```
 
-and call it from the `on_chunk_generated` handler, after `paint_chunk`:
+Then call it from the `on_chunk_generated` handler, after `paint_chunk`:
+
 ```lua
   compensate_resources(event.surface, {
     left = event.area.left_top.x, top = event.area.left_top.y,
@@ -980,11 +1061,13 @@ and call it from the `on_chunk_generated` handler, after `paint_chunk`:
 
 - [ ] **Step 2: In-game check**
 
-1. New game at cell size 26. Hover an iron patch and note the per-tile amount.
-2. New game with the mod disabled, same map seed. The vanilla amount should be
-   roughly `1 / 2.5` of the modded one at this setting.
-3. Infinite resources (crude oil) are **not** multiplied — their yield is a
-   percentage, and scaling it would be wrong.
+1. Start a new game at cell size 26. Hover over an iron patch and note the
+   amount per tile.
+2. Start a new game with the mod disabled and the same map seed. At this
+   setting, the vanilla amount should be about `1 / 2.5` of the modded
+   amount.
+3. The mod does **not** multiply infinite resources (crude oil). Their yield
+   is a percentage, and it would be wrong to scale it.
 
 - [ ] **Step 3: Commit**
 
@@ -998,10 +1081,11 @@ git commit -m "feat(mod): raise resource richness to offset band losses"
 ### Task 9: Thumbnail and mod packaging
 
 **Files:**
+
 - Create: `thumbnail.png`, `tools/package.sh`
 - Modify: `Makefile`
 
-- [ ] **Step 1: Generate the thumbnail from the renderer**
+- [ ] **Step 1: Generate the thumbnail with the renderer**
 
 ```bash
 lua5.2 tools/render.lua 4 9 72 /tmp/thumb.svg
@@ -1016,6 +1100,7 @@ print('thumbnail ok', im.size)"
 - [ ] **Step 2: Write the packaging script**
 
 `tools/package.sh`:
+
 ```bash
 #!/bin/sh
 # Build a mod zip Factorio will accept: the archive must contain a single
@@ -1035,19 +1120,20 @@ cd build && zip -qr "$DIR.zip" "$DIR"
 echo "built build/$DIR.zip"
 ```
 
-Note what is deliberately absent: `tools/`, `spec/`, `docs/`, `wiki/` and the
-`.github` directory never ship.
+Some things are left out on purpose: `tools/`, `spec/`, `docs/`, `wiki/` and
+the `.github` directory never ship.
 
-- [ ] **Step 3: Wire it into the Makefile**
+- [ ] **Step 3: Add it to the Makefile**
 
 ```makefile
 ## build the distributable mod zip
 package:
 	sh tools/package.sh
 ```
-and add `package` to `.PHONY`.
 
-- [ ] **Step 4: Verify the archive shape**
+Also add `package` to `.PHONY`.
+
+- [ ] **Step 4: Verify the structure of the archive**
 
 ```bash
 make package
@@ -1069,41 +1155,43 @@ git commit -m "feat(mod): thumbnail and distributable zip"
 
 ---
 
-### Task 10: Multiplayer determinism check  [DEFERRED]
+### Task 10: Multiplayer determinism check [DEFERRED]
 
-> **Deferred by decision, not forgotten.** This needs a second machine and
-> ideally a second operating system, which is the whole point of the check --
-> the risk being tested is divergence between platforms. It gates *release*,
-> not the code, and the mod is marked single-player-only until it is done.
+> **We deferred this on purpose. We did not forget it.** The check needs a
+> second machine, and if possible a second operating system. That is the
+> whole point of the check, because the risk it tests is a difference between
+> platforms. It blocks the *release*, not the code. Until the check is done,
+> the mod is marked as single player only.
 
-The spec's determinism argument is from first principles — correctly-rounded
-IEEE operations, no `sin`/`cos`/`pow`, one VM instruction per operation. It
-has never been confirmed empirically, and a desync is the one bug that cannot
-be shrugged off.
+The determinism argument in the spec comes from first principles: correctly
+rounded IEEE operations, no `sin`/`cos`/`pow`, and one VM instruction per
+operation. Nobody has confirmed it by experiment yet. A desync is the one bug
+that we cannot ignore.
 
 **Files:**
+
 - Create: `docs/design/desync-check.md`
 
 - [ ] **Step 1: Run the check**
 
 1. Host a multiplayer game with the mod, on a machine that generates terrain.
-2. Join from a second machine — ideally a **different OS**, since the risk
-   being tested is libm and floating-point divergence between platforms.
-3. Both players travel outward in different directions for several minutes,
-   generating fresh chunks on each client.
-4. Confirm no desync occurs, and that both clients show identical terrain at
-   the same coordinates.
+2. Join from a second machine. If possible, use a **different OS**, because
+   the risk under test is a difference in libm and floating point between
+   platforms.
+3. Both players travel outwards in different directions for several minutes,
+   so that each client generates new chunks.
+4. Check that no desync occurs, and that both clients show the same terrain
+   at the same coordinates.
 
-If a desync does occur, capture the report and check first for any `math.sin`,
-`math.cos`, `math.random` or `^` that has crept into shipped Lua — the
-invariant test in `spec/invariants_spec.lua` greps for exactly these.
+If a desync occurs, save the report. Then look first for any `math.sin`,
+`math.cos`, `math.random` or `^` that got into shipped Lua. The invariant test
+in `spec/invariants_spec.lua` searches for exactly these.
 
 - [ ] **Step 2: Record the result**
 
-Write `docs/design/desync-check.md` stating what was tested — the two
-platforms, the Factorio version, how long, how far — and the outcome. A
-determinism claim with no evidence behind it is worth recording as exactly
-that.
+Write `docs/design/desync-check.md`. Give what you tested (the two platforms,
+the Factorio version, how long and how far) and the result. If a claim of
+determinism has no evidence, record it as a claim with no evidence.
 
 - [ ] **Step 3: Commit**
 
@@ -1114,50 +1202,51 @@ git commit -m "docs: record the multiplayer determinism check"
 
 ---
 
-## Deliberately deferred
+## Deferred on purpose
 
-Two spec items are not implemented here, and the reasons belong on record
-rather than in someone's head.
+This plan does not implement two items from the spec. The reasons must be on
+record, not only in someone's head.
 
 **The optional crisp outline** (design section 10). The spec allows a
-sub-tile-precise `draw_line` overlay down the centre of each band, toggled at
-runtime. The band tiles already make the structure perfectly legible, and the
-overlay costs up to ~19k render objects on screen at the smallest cell sizes.
-YAGNI: ship without it, add it if anyone asks.
+`draw_line` overlay with sub-tile precision down the centre of each band, with
+a runtime toggle. The band tiles already make the structure easy to read, and
+at the smallest cell sizes the overlay costs up to about 19k render objects on
+the screen. YAGNI: ship without it, and add it if anyone asks.
 
-**No grace area at spawn** (design section 16, which left this open). At the
-default 26/2 the spawn cell holds ~347 buildable tiles, which is comfortably
-enough for a burner start, and bands are walkable so nothing is unreachable
-before underground belts arrive. A grace area would also undercut the premise
-in exactly the place a new player forms their impression of the mod. Decided:
-no grace area. This is the first thing to revisit after playtesting, and the
-`hattorio-hat-size-*` setting is the escape hatch in the meantime.
+**No grace area at spawn** (design section 16 left this open). At the default
+26/2, the spawn cell holds about 347 buildable tiles. That is easily enough
+for a burner start. Bands are walkable, so everything is reachable before
+underground belts arrive. A grace area would also weaken the premise exactly
+where a new player forms an impression of the mod. Decision: no grace area.
+Look at this again first after playtests. Until then, the
+`hattorio-hat-size-*` setting is the escape hatch.
 
-**Per-planet band graphics are colour-only for now.** Task 2 clones a vanilla
-tile and changes `map_color`, so bands differ on the map view but share
-in-world graphics across planets. Real per-planet art is a later job; the
-design's "per-planet tinted" is only half met, and Task 2 says so.
+**For now, the band graphics for each planet change only the colour.** Task 2
+copies a vanilla tile and changes `map_color`. So the bands look different on
+the map view, but they have the same graphics in the world on every planet.
+Real art for each planet is a later job. The design asks for a "per-planet
+tinted" look, and this meets only half of it. Task 2 says so.
 
 ## Verification
 
-After Task 10:
+After task 10:
 
 ```bash
 make check          # Python + Lua tests + luacheck
 make package        # builds build/hattorio_0.1.0.zip
 ```
 
-plus the in-game checklists in Tasks 2, 4, 5, 7, 8 and 10, none of which a
-green test suite substitutes for.
+Also do the in-game checklists in tasks 2, 4, 5, 7, 8 and 10. A green test
+suite does not replace any of them.
 
 ## Notes for the executor
 
-- **`hat/` is finished. Do not modify it.** If the mod seems to need a change
-  there, that is a sign the mod is reaching past its interface.
-- **Blocking is native, not scripted.** If you find yourself adding
-  `on_built_entity` to reject placements, the collision layer is not working —
-  fix that instead. Script rejection places the entity and then removes it,
-  which is visibly worse and leaves ghosts for bots to retry.
-- **Never paint over water.** `is_paveable` exists for that reason.
-- **Chunk-boundary continuity is not optional.** Every chunk derives its bands
-  from the tiling, never from a neighbouring chunk's tiles.
+- **`hat/` is finished. Do not change it.** If the mod seems to need a change
+  there, the mod is probably reaching past its interface.
+- **The game blocks construction natively, not a script.** If you start to add
+  `on_built_entity` to reject placements, the collision layer does not work.
+  Fix the layer. Rejection in a script places the entity and then removes it.
+  That looks worse, and it leaves ghosts that bots try to build again.
+- **Never paint over water.** `is_paveable` exists for this reason.
+- **Bands must be continuous across chunk boundaries.** Every chunk derives
+  its bands from the tiling, never from the tiles of a neighbouring chunk.

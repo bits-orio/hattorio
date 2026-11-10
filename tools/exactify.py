@@ -1,20 +1,22 @@
-"""The limiting phi-proportioned metatiles, where the substitution is exactly
-self-similar.
+"""The limiting metatiles with phi proportions, where the substitution is
+exactly self-similar.
 
-Why this exists: hatviz's construct_metatiles derives each level's outlines
-geometrically, so they are exact rationals converging on irrational limits and
-their numerators blow up (level 7 already exceeds 2^53). That caps the
-emittable depth at 6. In the LIMIT the shapes have tiny exact coefficients and
-one rule set works at every depth.
+Why this module exists: construct_metatiles in hatviz derives the outlines for
+each level from the geometry. So the outlines are exact rationals that
+converge on irrational limits, and their numerators grow very fast (level 7
+already goes past 2^53). That limits the depth that we can emit to 6. In the
+LIMIT, the shapes have very small exact coefficients, and one rule set works
+at every depth.
 
-The constants below were recovered by integer-relation recognition against a
-level-22 normalisation (agreeing independently at level 14 to 1e-8 and level 22
-to 1e-14), then VERIFIED: substituting them reproduces them scaled by phi^2
-exactly, as ring elements. verify_fixed_point() re-runs that check, and
-rederive_outlines() re-runs the recognition from scratch.
+We recovered the constants below with integer-relation recognition against a
+level-22 normalisation. The results agree independently at level 14 (to 1e-8)
+and at level 22 (to 1e-14). Then we VERIFIED them: if you substitute them, you
+get the same shapes scaled by phi^2, exactly, as ring elements.
+verify_fixed_point() runs that check again, and rederive_outlines() runs the
+recognition again from the start.
 
-Each coordinate is (a, b, q) meaning (a + b*phi)/q; y values are that times
-sqrt(3).
+Each coordinate is (a, b, q), which means (a + b*phi)/q. The y values are that
+value times sqrt(3).
 """
 from __future__ import annotations
 
@@ -80,7 +82,8 @@ def self_similar_rules():
 
 
 def verify_fixed_point() -> list[str]:
-    """Substituting the limit shapes must reproduce them scaled by phi^2, exactly."""
+    """A substitution of the limit shapes must give them back scaled by phi^2,
+    exactly."""
     limit = limit_shapes()
     nxt = construct_metatiles(construct_patch(limit))
     phi2 = K.PHI * K.PHI
@@ -108,7 +111,7 @@ def max_rule_coefficient() -> int:
     return worst
 
 
-# --- rederivation, for the test that the constants are not invented ---------
+# --- derive again, for the test that shows the constants are not invented ---
 
 def _recognise(v, tol, maxq=400, maxab=3000):
     getcontext().prec = 120
@@ -124,7 +127,7 @@ def _recognise(v, tol, maxq=400, maxab=3000):
 
 
 def rederive_outlines(level=DERIVE_LEVEL, tol=None):
-    """Re-run recognition from the substitution itself. Slow; used by tests."""
+    """Run the recognition again from the substitution. Slow; the tests use it."""
     getcontext().prec = 120
     phi = (1 + D(5).sqrt()) / 2
     s3 = D(3).sqrt()

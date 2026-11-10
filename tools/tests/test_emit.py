@@ -25,8 +25,8 @@ def test_rules_cover_every_level_and_shape():
 
 
 def test_every_emitted_float_round_trips_exactly():
-    """%.17g must reproduce the double bit for bit, or the Lua descent
-    silently diverges from the pipeline that validated it."""
+    """%.17g must give back the double bit for bit. If not, the Lua descent
+    drifts away from the pipeline that validated it, with no error."""
     _run("tools.emit_lua")
     for name in ("hat_rules.lua", "hat_geometry.lua"):
         text = (ROOT / "data" / name).read_text()
@@ -59,8 +59,8 @@ def test_golden_fixture_is_written():
 
 
 def test_mod_package_has_the_right_shape():
-    """The zip must hold one <name>_<version>/ directory with info.json at its
-    root, the tiling core and its data, and no development files."""
+    """The zip must hold one <name>_<version>/ directory, with info.json at its
+    root, the tiling core and its data. It must hold no development files."""
     import zipfile
     subprocess.run([sys.executable, "tools/package.py"], cwd=ROOT, check=True)
     info = json.loads((ROOT / "info.json").read_text())
@@ -77,8 +77,8 @@ def test_mod_package_has_the_right_shape():
 
 
 def test_version_is_consistent():
-    """info.json, changelog.txt and any release tag must agree. A mod portal
-    page describing a build nobody has is the failure this prevents."""
+    """info.json, changelog.txt and any release tag must agree. This test
+    prevents a mod portal page that describes a build that nobody has."""
     r = subprocess.run([sys.executable, "tools/check_version.py"],
                        cwd=ROOT, capture_output=True, text=True)
     assert r.returncode == 0, r.stderr

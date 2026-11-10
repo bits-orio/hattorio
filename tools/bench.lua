@@ -1,10 +1,10 @@
--- Descent cost per 32x32 chunk at realistic settings.
+-- The cost of the descent for each 32x32 chunk, at realistic settings.
 --   lua5.2 tools/bench.lua
 package.path = "./?.lua;" .. package.path
 
 local Ti = require("hat.tiling")
 
-local UNIT = 4.365          -- hat size 20 tiles
+local UNIT = 4.365          -- hat size 10 tiles (Ti.hat_size_for_unit)
 local depth = Ti.max_depth()
 local t = Ti.new({ unit = UNIT, depth = depth })
 
@@ -24,9 +24,10 @@ print(string.format("descent:   %d chunks, %.3f ms/chunk, %.2f hats/chunk",
       CHUNKS, ms, total/CHUNKS))
 assert(ms < 50, "descent too slow for chunk generation: " .. ms .. " ms")
 
--- Full per-chunk cost, which is what terrain generation actually pays.
--- Rasterising each edge into its own bounding box rather than testing every
--- tile against every edge took this from 39.7 ms/chunk to about 1.3.
+-- The full cost for each chunk. Terrain generation pays this cost.
+-- Before, the code tested every tile against every edge. Now it rasterises
+-- each edge into its own bounding box, and the cost fell from 39.7 ms per
+-- chunk to about 1.3.
 local Config = require("mod.config")
 local Bands = require("mod.bands")
 local g = Config.geometry(26, 2)

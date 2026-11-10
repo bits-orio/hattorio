@@ -1,10 +1,10 @@
 """Substitution rules, ported from hatviz (BSD-3-Clause). See THIRD_PARTY.md.
 
-hatviz holds a fixed 29-entry combinatorial table and computes the actual
-transforms with matchTwo against the CURRENT outlines; constructMetatiles then
-derives the next level's outlines geometrically. The outlines therefore change
-level to level, converging on the limiting phi-proportioned shapes. There is no
-fixed matrix set to port.
+hatviz holds a fixed combinatorial table with 29 entries. It calculates the
+actual transforms with matchTwo against the CURRENT outlines. Then
+constructMetatiles derives the outlines for the next level from the geometry.
+So the outlines change from level to level, and they converge on the limiting
+shapes with phi proportions. There is no fixed set of matrices to port.
 """
 from __future__ import annotations
 
@@ -45,7 +45,7 @@ def rotate_about(centre: Pt, n: int) -> Xf:
 
 
 def line_intersect(p1: Pt, q1: Pt, p2: Pt, q2: Pt) -> Pt:
-    """hatviz intersect(p1, q1, p2, q2): the crossing of line p1-q1 with p2-q2."""
+    """hatviz intersect(p1, q1, p2, q2): the point where line p1-q1 crosses p2-q2."""
     d = (q2.y - p2.y) * (q1.x - p1.x) - (q2.x - p2.x) * (q1.y - p1.y)
     if d.is_zero():
         raise ZeroDivisionError("parallel lines in line_intersect")
@@ -84,7 +84,7 @@ def construct_patch(shapes) -> MetaTile:
 
 
 def _recentre(mt: MetaTile) -> MetaTile:
-    """hatviz recentre: shift so the outline's CENTROID sits at the origin."""
+    """hatviz recentre: move the outline so that its CENTROID is at the origin."""
     n = len(mt.outline)
     cx = mt.outline[0].x
     cy = mt.outline[0].y

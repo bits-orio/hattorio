@@ -1,59 +1,61 @@
 # Toolchain
 
-What the project actually uses, and why. Anything proposed but not adopted
-has been removed; the reasoning behind the arithmetic choices lives in
-`hattorio-design.md` sections 5 and 14.
+This page lists the tools that the project actually uses, and the reasons. We
+removed everything that was proposed but not adopted. The reasons for the
+arithmetic choices are in sections 5 and 14 of `hattorio-design.md`.
 
 ## Runtime: Lua 5.2.1
 
-Not a choice. Factorio embeds Lua 5.2.1 and the mod runs inside it.
+We did not choose this. Factorio embeds Lua 5.2.1, and the mod runs inside it.
 
-Two consequences that shape the code:
+This has two effects on the code:
 
-- **No integer subtype.** Every number is a double, exact only to 2^53. The
-  tiling core stores values rather than exact integers precisely because of
-  this; see design section 5.
-- **`tostring` is `%.14g`, and lossy.** This is why hat identity is a packed
-  descent path (`hat/index.lua`) and never a formatted coordinate. The
-  original scaffold keyed identity off `string.format("%.3f", ...)`, which
-  can collide two hats or give one hat two ids.
+- **No integer subtype.** Every number is a double, which is exact only up to
+  2^53. For this reason the tiling core stores values and not exact integers.
+  See design section 5.
+- **`tostring` uses `%.14g` and loses precision.** For this reason a hat's
+  identity is a packed descent path (`hat/index.lua`) and never a formatted
+  coordinate. The first scaffold made the identity from
+  `string.format("%.3f", ...)`. That can give two hats the same id, or give
+  one hat two ids.
 
-Where floats are emitted for Lua to read, `%.17g` is used, which round-trips
-a double exactly. A test asserts every emitted value survives the round trip.
+When the pipeline writes floats for Lua to read, it uses `%.17g`. This format
+round-trips a double exactly. A test checks that every written value survives
+the round trip.
 
-## Testing: busted + luassert
+## Testing: busted and luassert
 
-Red-green-refactor throughout. `spec/*_spec.lua`, auto-discovered via
-`.busted`.
+We used red-green-refactor for all the work. The tests are in
+`spec/*_spec.lua`, and busted finds them through `.busted`.
 
-Tests must run under **Lua 5.2 specifically**. Running them on 5.4 would
-silently mask the all-doubles behaviour the core depends on, since 5.3+ adds
-an integer subtype. CI pins 5.2 for the same reason.
+The tests must run under **Lua 5.2 specifically**. Lua 5.3 and later add an
+integer subtype, so on 5.4 the tests would hide the all-doubles behaviour that
+the core depends on. CI pins 5.2 for the same reason.
 
-On Arch, `lua52-busted` installs the rock off PATH with a shebang pointing at
-Lua 5.5, where its modules do not exist. The Makefile prefers a `busted` on
-PATH and falls back to the rock path.
+On Arch, `lua52-busted` installs the rock outside PATH, and its shebang points
+at Lua 5.5, where its modules do not exist. The Makefile uses a `busted` on
+PATH if there is one. If not, it uses the rock path.
 
 **Property-style tests are plain loops over fixed seeds**, not a generative
-library. `lua-quickcheck` was considered and dropped: no luarocks package on
-Arch ships a CLI, so it cannot be installed without building from source, and
-fixed seeds are more reproducible anyway.
+library. We considered `lua-quickcheck` and dropped it. No luarocks package on
+Arch includes a CLI, so you can install it only if you build it from source.
+Fixed seeds are also easier to reproduce.
 
 ## Static analysis: luacheck
 
-Run by `make lint` and in CI, over `hat/` and `spec/`. Zero warnings is the
-standard.
+`make lint` and CI run luacheck over `hat/`, `mod/`, `prototypes/` and
+`spec/`. The standard is zero warnings.
 
-**No static type checker is used.** Teal was considered and rejected: it has
-no Factorio API definitions, so every game call would become an untyped escape
-hatch, and it adds a `.tl` to `.lua` build step. LuaLS annotations were chosen
-in the design phase but never actually applied — there are none in the
-codebase today. If typing is wanted, that is the route, and it should be
-adopted deliberately rather than assumed.
+**We use no static type checker.** We considered Teal and rejected it. It has
+no definitions for the Factorio API, so every call to the game would become
+an untyped escape hatch. It also adds a build step from `.tl` to `.lua`. In
+the design phase we chose LuaLS annotations, but we never added them, and the
+code has none today. If you want types, use LuaLS annotations, and adopt them
+as a deliberate decision.
 
 ## Layout
 
-```
+```text
 hat/     tiling core, no Factorio dependencies, loads under plain lua5.2
 tools/   offline pipeline (Python 3, stdlib only) and dev renderers
 data/    generated Lua data; regenerate with `make data`, never hand-edit
@@ -61,67 +63,74 @@ spec/    busted tests, plus fixtures exported from the pipeline
 wiki/    source for the GitHub wiki; publish with `make wiki`
 ```
 
-The split that matters: `hat/` has no Factorio dependencies, so it runs in CI
-under plain Lua, and `tools/` never ships. Exactness lives offline where it is
-free; only values ship.
+The important split is this: `hat/` has no Factorio dependencies, so it runs
+in CI under plain Lua, and `tools/` never ships. The exact arithmetic stays
+offline, where it costs nothing. Only the values ship.
 
 ## Verification strategy
 
-Formal verification was considered and dropped — no practical tooling exists
-for Lua; mechanised semantics are research artifacts, not verifiers.
+We considered formal verification and dropped it. No practical tools exist
+for Lua. The mechanised semantics for Lua are research artefacts, not
+verifiers.
 
-What replaces it is three layers that do run:
+In its place, three layers of checks run:
 
-1. **Offline proofs** (`tools/verify.py`) — the generated tiling is checked
-   for overlapping hats, gaps by flood-fill, reflected-hat density converging
-   to 1/(phi^4+1), and hat counts matching F(2n+3)^2 exactly.
-2. **Golden fixtures** — the pipeline exports a reference patch that the Lua
-   descent must reproduce. This validates the code that ships against the
-   arithmetic that was proved correct.
-3. **Invariant tests** — `spec/invariants_spec.lua` greps the shipped modules
-   for `math.sin`, `math.cos`, `math.random` and `^`, none of which are
-   bit-identical across platforms.
+1. **Offline proofs** (`tools/verify.py`). The pipeline checks the generated
+   tiling for overlapping hats and for gaps (with a flood fill). It checks
+   that the density of reflected hats converges to 1/(phi^4+1), and that the
+   hat counts match F(2n+3)^2 exactly.
+2. **Golden fixtures.** The pipeline exports a reference patch, and the Lua
+   descent must produce the same patch. This tests the code that ships against
+   the arithmetic that we proved correct.
+3. **Invariant tests.** `spec/invariants_spec.lua` searches the shipped
+   modules for `math.sin`, `math.cos`, `math.random` and `^`. None of these
+   give identical bits on all platforms.
 
 ## Functional core
 
-The `hat/` modules are pure: no mutable state, no Factorio API, total
-functions of their inputs. Side effects belong in the Factorio-facing layer.
+The `hat/` modules are pure. They have no mutable state and do not use the
+Factorio API, and every function is total over its inputs. Side effects
+belong in the layer that talks to Factorio.
 
-This was arrived at from the determinism constraint rather than from a
-principle, but it lines up with SUPER (side effects at the edge, uncoupled
-logic, pure and total functions, explicit data flow, replaceable by value).
-Design section 7 states the three rules that make it explicit.
+We got here from the determinism constraint, not from a principle. But the
+result matches SUPER (side effects at the edge, uncoupled logic, pure and
+total functions, explicit data flow, replaceable by value). Design section 7
+gives the three rules that make this explicit.
 
-The one deliberate exception is the descent's output accumulator, mutated in
-place for speed. It is local to `hat/tiling.lua` and never escapes.
+There is one deliberate exception. The descent changes its output accumulator
+in place, for speed. The accumulator is local to `hat/tiling.lua` and never
+leaves it.
 
 ## Releasing
 
-`info.json` is the single source of truth for the version. Everything else
-must agree with it, and `tools/check_version.py` enforces that on every push,
-not only when a release is cut:
+`info.json` is the only source of truth for the version. Everything else must
+agree with it. `tools/check_version.py` checks this on every push, not only
+when you make a release:
 
-- the changelog must have a `Version: X.Y.Z` entry for it, listed first
-- the changelog must open with exactly 99 dashes, or Factorio refuses to load
-  the mod with an unhelpful message
-- a release tag, if given, must be `v<version>`
+- the changelog must have a `Version: X.Y.Z` entry for the version, and that
+  entry must be first
+- the changelog must start with exactly 99 dashes, or Factorio does not load
+  the mod and shows an unhelpful message
+- if you give a release tag, it must be `v<version>`
 
-A release is cut by pushing a tag:
+To make a release, push a tag:
 
 ```bash
 # bump info.json and add a changelog entry first
 git tag v0.2.0 && git push origin v0.2.0
 ```
 
-`.github/workflows/release.yml` then verifies the version, runs the full suite
-under Lua 5.2, builds the zip, attaches it to a GitHub release, and uploads it
-to the Factorio mod portal.
+`.github/workflows/release.yml` then verifies the version and runs the full
+suite under Lua 5.2. It builds the zip, attaches it to a GitHub release and
+uploads it to the Factorio mod portal.
 
-The portal upload needs a `FACTORIO_API_KEY` repository secret, from
-https://factorio.com/profile with the *ModPortal: Upload Mods* permission. It
-runs in a `mod-portal` GitHub environment, which can be given a required
-reviewer so a human approves before anything is published.
+The portal upload needs a repository secret called `FACTORIO_API_KEY`. Get the
+key from <https://factorio.com/profile> with the *ModPortal: Upload Mods*
+permission. The upload runs in a GitHub environment called `mod-portal`. You
+can give that environment a required reviewer, so that a person approves
+before anything is published.
 
-**A portal release cannot be withdrawn.** That is why every check runs before
-the upload step rather than after, and why the upload never fires on a branch
-push — only on a tag, or a manual dispatch that explicitly asks for it.
+**You cannot withdraw a release from the portal.** For this reason every check
+runs before the upload step and not after it. Also, a branch push never
+starts the upload. Only a tag starts it, or a manual dispatch that asks for it
+explicitly.

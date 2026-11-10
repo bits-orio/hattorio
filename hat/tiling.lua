@@ -1,15 +1,15 @@
 -- Lazy descent over the substitution tree.
 --
--- Emits only hats that could touch the query box, so cost is proportional to
--- output rather than to the size of the tiling.
+-- The descent returns only the hats that can touch the query box. So the cost
+-- grows with the output, not with the size of the tiling.
 --
--- Exact ring arithmetic composes the transforms, because error there would
--- accumulate across the descent and eventually split a shared edge. Pruning is
--- float-only, which is safe: it uses + - * / and sqrt, all IEEE-deterministic.
+-- The transforms are plain doubles (see hat/transform.lua). Composition and
+-- pruning use only + - * / and sqrt, and IEEE-754 makes all of these
+-- deterministic.
 --
--- Rules are indexed BY LEVEL. hatviz derives each level's metatile outlines
--- geometrically, so they genuinely differ level to level; a single rule table
--- reused at every depth would be wrong.
+-- The rules are indexed BY LEVEL. hatviz derives the metatile outlines for
+-- each level from the geometry, so the outlines really are different at each
+-- level. One rule table for every depth would be wrong.
 
 local T = require("hat.transform")
 local G = require("hat.geometry")
@@ -19,10 +19,11 @@ local RULES = require("data.hat_rules")
 local Ti = {}
 Ti.__index = Ti
 
---- Tiles per kite unit that yields hats of the given circumradius.
--- The level-0 placements carry a 0.5 factor (H_init et al), so a descent run
--- at `unit` produces hats of circumradius hat_scale * unit * G.RADIUS. Callers
--- should state the hat size they want and let this do the conversion.
+--- Tiles per kite unit that give hats of the given circumradius.
+-- The level-0 placements have a factor of 0.5 (H_init and the others). So a
+-- descent at `unit` gives hats with a circumradius of
+-- hat_scale * unit * G.RADIUS. Callers must give the hat size they want and
+-- let this function do the conversion.
 function Ti.unit_for_hat_size(size)
   return size / (RULES.hat_scale * G.RADIUS)
 end
@@ -32,10 +33,10 @@ function Ti.hat_size_for_unit(unit)
   return RULES.hat_scale * unit * G.RADIUS
 end
 
---- Shallowest depth whose root covers `cover` world units at this unit scale.
--- Coverage scales linearly with hat size, so a smaller hat needs a deeper
--- root: at the minimum size setting that is depth 13, at the maximum, 11.
--- Returns nil if the emitted data cannot reach that far.
+--- The shallowest depth whose root covers `cover` world units at this unit.
+-- Coverage grows linearly with the hat size, so a smaller hat needs a deeper
+-- root. At the minimum size setting that is depth 13, and at the maximum it
+-- is depth 11. Returns nil if the emitted data cannot reach that far.
 function Ti.depth_covering(unit, cover)
   for d = 0, RULES.max_level do
     if RULES.radius[d].H * unit >= cover then return d end
@@ -44,9 +45,10 @@ function Ti.depth_covering(unit, cover)
 end
 
 --- opts = { unit = , depth = } or { unit = , cover = }
--- `cover` is the world radius that must be tiled, in the same units as the
--- box passed to hats_in_box. Derive depth once at surface creation and store
--- it; never recompute it per chunk.
+-- `cover` is the world radius that the tiling must fill. It uses the same
+-- units as the box that goes to hats_in_box. Derive the depth once, when the
+-- surface is created, and store it. Never calculate it again for each
+-- chunk.
 function Ti.new(opts)
   local self = setmetatable({}, Ti)
   self.unit = opts.unit or 1
@@ -68,7 +70,7 @@ function Ti.max_depth()
   return RULES.max_level
 end
 
---- Smallest depth whose root covers a disc of the given radius, or nil.
+--- The smallest depth whose root covers a disc of the given radius, or nil.
 function Ti:depth_for_radius(r)
   for d = 0, RULES.max_level do
     if RULES.radius[d][self.root_shape] * self.unit >= r then return d end
@@ -76,12 +78,12 @@ function Ti:depth_for_radius(r)
   return nil
 end
 
---- Circumradius in world units of this tiling's root.
+--- The circumradius of the root of this tiling, in world units.
 --
 -- CAUTION: this is a circumradius, and the root is a hexagonal metatile, not a
--- disc. A square region inscribed in this circle is NOT fully tiled -- its
--- corners fall outside the root. When choosing `cover`, pass comfortably more
--- than the half-diagonal of the region you need, not its half-width.
+-- disc. A square region inside this circle is NOT fully tiled, because its
+-- corners are outside the root. For `cover`, give a value well above the
+-- half-diagonal of the region you need. Do not give its half-width.
 function Ti:coverage()
   return RULES.radius[self.depth][self.root_shape] * self.unit
 end
@@ -113,7 +115,7 @@ function Ti:_descend(shape, xf, level, box, path, out)
     local child = T.mul(xf, r.xf)
     path[n + 1] = i - 1
     if level == 0 then
-      -- level-0 children are the hats themselves
+      -- the children at level 0 are the hats
       local px, py = T.origin(child)
       px, py = px * self.unit, py * self.unit
       local hr = G.RADIUS * T.scale(child) * self.unit
@@ -131,7 +133,7 @@ function Ti:_descend(shape, xf, level, box, path, out)
   end
 end
 
---- Hats overlapping an axis-aligned world-space box.
+--- The hats that overlap an axis-aligned box in world space.
 -- @param box { left=, top=, right=, bottom= }
 function Ti:hats_in_box(box)
   local out = {}

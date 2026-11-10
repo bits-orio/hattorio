@@ -3,9 +3,9 @@ local Ti = require("hat.tiling")
 
 describe("spec invariants", function()
   it("uses no platform-nondeterministic functions in shipped modules", function()
-    -- IEEE + - * / and sqrt are correctly rounded and so bit-identical across
-    -- platforms. sin, cos, random and pow are not, and a divergence between
-    -- two Factorio clients is a desync.
+    -- IEEE + - * / and sqrt are correctly rounded, so they give identical
+    -- bits on all platforms. sin, cos, random and pow do not, and a
+    -- difference between two Factorio clients is a desync.
     for _, name in ipairs({ "transform", "geometry", "index", "tiling" }) do
       local f = assert(io.open("hat/" .. name .. ".lua", "r"))
       local src = f:read("*a"); f:close()
@@ -18,7 +18,7 @@ describe("spec invariants", function()
   end)
 
   it("covers the whole Factorio map at max depth", function()
-    -- half-extent of a Factorio map is ~1e6 tiles
+    -- the half-extent of a Factorio map is about 1e6 tiles
     local t = Ti.new({ unit = 4.365, depth = Ti.max_depth() })
     assert.is_true(t:coverage() > 1e6, "coverage " .. t:coverage())
   end)

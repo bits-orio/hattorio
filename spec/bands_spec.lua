@@ -48,8 +48,8 @@ describe("band rasterisation", function()
   end)
 
   it("agrees across a chunk boundary", function()
-    -- a band must not break where two chunks meet: every chunk derives its
-    -- tiles from the tiling, never from a neighbour's tiles
+    -- a band must not break where two chunks meet. Every chunk derives its
+    -- tiles from the tiling, never from the tiles of a neighbour
     local t, g = setup(26, 2)
     local l = Bands.for_area(t, g, { left=-32, top=0, right=0,  bottom=32 })
     local r = Bands.for_area(t, g, { left=0,   top=0, right=32, bottom=32 })

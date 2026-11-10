@@ -1,7 +1,8 @@
 """Validation of generated hat patches.
 
-This is the gate. A sign error anywhere upstream surfaces here as overlapping
-hats or hairline gaps, before any Lua exists. Do not proceed past a failure.
+This is the gate. A sign error anywhere earlier in the pipeline shows up here
+as overlapping hats or very thin gaps, before any Lua exists. Do not continue
+after a failure.
 """
 from __future__ import annotations
 
@@ -63,7 +64,7 @@ def _inside(poly, x, y):
 
 
 class _Grid:
-    """Uniform bucket grid so containment queries are not O(n) per point."""
+    """Uniform bucket grid, so that a containment query is not O(n) per point."""
 
     def __init__(self, polys, cell):
         self.cell = cell
@@ -80,7 +81,7 @@ class _Grid:
 
 
 def check_no_overlaps(hats, samples=12, seed=12345):
-    """Interior samples of each hat must lie in no other hat."""
+    """No sample from the interior of a hat may be inside another hat."""
     polys = [_poly_f(x) for x, _ in hats]
     grid = _Grid(polys, cell=3.0)
     rng = random.Random(seed)
@@ -104,7 +105,7 @@ def check_no_overlaps(hats, samples=12, seed=12345):
 
 
 def check_no_gaps(hats, resolution=120):
-    """Sample a disc well inside the patch; every sample must land in some hat."""
+    """Sample a disc well inside the patch. Every sample must be inside a hat."""
     polys = [_poly_f(x) for x, _ in hats]
     grid = _Grid(polys, cell=3.0)
     xs = [p[0] for poly in polys for p in poly]

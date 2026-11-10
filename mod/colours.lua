@@ -1,15 +1,15 @@
--- Band colourways, selected by a startup setting.
+-- Band colours. A startup setting selects one.
 --
--- `body` is the surface itself and is near-black in every option: the bands
--- are meant to read as depth, not as paint. `highlight` is what the shader
--- catches at the edges, and is what actually distinguishes one option from
--- another -- comparing the bodies alone, they are indistinguishable.
+-- `body` is the surface itself, and it is nearly black in every option. The
+-- bands must look like depth, not like paint. `highlight` is the colour that
+-- the shader shows at the edges. The highlight is what makes the options
+-- different: if you compare only the bodies, you cannot tell them apart.
 --
--- `mirror` tints the reflected cells, about one in eight, which are a
--- mathematical property of this tiling rather than a decoration.
+-- `mirror` tints the reflected cells (about one in eight). They are a
+-- mathematical property of this tiling, not a decoration.
 --
--- Colour is independent of band style: each works with the animated liquid
--- and with the flat void.
+-- Colour and band style are independent. Each colour works with the animated
+-- liquid and with the flat void.
 return {
   violet = { body = { 30, 19, 48 }, highlight = { 98, 60, 152 }, mirror = { 158, 104, 208 } },
   cold   = { body = { 23, 27, 34 }, highlight = { 62, 78, 93 },  mirror = { 82, 124, 166 } },

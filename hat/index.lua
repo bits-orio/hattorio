@@ -1,11 +1,13 @@
--- Stable hat identity: the descent path from root to hat, packed as bytes.
+-- Stable hat identity: the descent path from the root to the hat, packed as
+-- bytes.
 --
--- Exact by construction -- no float ever enters the key. Deliberately NOT
--- string.format on a coordinate, which is %.14g underneath and lossy enough
--- that two distinct hats can collide or one hat can produce two ids.
+-- The key is exact by construction, because no float ever goes into it. It is
+-- deliberately NOT string.format on a coordinate. That uses %.14g and loses
+-- enough precision that two different hats can get the same id, or one hat
+-- can get two ids.
 --
--- Prefixes are ancestors: ancestor(key, k) names the level-k supertile, which
--- gives any future region or territory layer a free hierarchy.
+-- Each prefix is an ancestor: ancestor(key, k) names the level-k supertile.
+-- So a future region or territory layer gets a hierarchy for free.
 
 local I = {}
 

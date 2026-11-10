@@ -37,8 +37,8 @@ def test_integrality_and_denominator():
 
 
 def test_inverse_phi_squared_is_integral():
-    # 1/phi^2 == 2 - phi, an integer element. Load-bearing: the substitution
-    # downscale must never introduce a denominator.
+    # 1/phi^2 == 2 - phi, an integer element. This is essential: the downscale in
+    # the substitution must never add a denominator.
     inv = K.from_int(1) / (K.PHI * K.PHI)
     assert inv == K.from_int(2) - K.PHI
     assert inv.is_integral()

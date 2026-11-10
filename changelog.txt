@@ -1,4 +1,10 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.0.0
+Date: 2026-11-10
+  Changes:
+    - Rewrote the documentation and the code comments in plain British English.
+    - Corrected documentation that no longer matched the mod.
+---------------------------------------------------------------------------------------------------
 Version: 0.1.1
 Date: 2026-09-20
   Changes:

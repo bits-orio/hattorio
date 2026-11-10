@@ -1,9 +1,9 @@
--- /hattorio-info -- what geometry and richness are actually in force.
+-- /hattorio-info shows the geometry and richness that are actually in use.
 --
--- Exists because several of this mod's settings have effects that cannot be
--- observed directly. "Ore richness override = 0" means "derive it from cell
--- size and band width", and there is otherwise no way to see what that
--- derivation produced, or whether an override took effect at all.
+-- Some settings of this mod have effects that you cannot see directly. "Ore
+-- richness override = 0" means "derive it from the cell size and the band
+-- width". Without this command you cannot see the derived value, or whether
+-- an override had any effect.
 
 local Surface = require("mod.surface")
 

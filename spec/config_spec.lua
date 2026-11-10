@@ -73,9 +73,9 @@ end)
 describe("cell statistics", function()
 
   it("has measurements for every combination the dropdowns offer", function()
-    -- a missing entry silently falls back to the fitted estimate, which is
-    -- much worse at small cells; this catches a choice added without
-    -- measuring it
+    -- a missing entry falls back to the fitted estimate with no warning, and
+    -- that estimate is much worse at small cells. This test finds a choice
+    -- that somebody added without a measurement
     for _, size in ipairs(Config.SIZE_CHOICES) do
       for _, band in ipairs(Config.BAND_CHOICES) do
         local st = Config.cell_stats(size, band)
@@ -133,7 +133,7 @@ describe("cell statistics", function()
   end)
 
   it("flags only the combinations that are barely playable", function()
-    -- 15/4 gives a 4x4 largest square; a drill and an assembler are both 3x3
+    -- at 15/4 the largest square is 4x4. A drill and an assembler are both 3x3
     assert.is_true(Config.is_severe(15, 4))
     assert.is_false(Config.is_severe(15, 2))
     assert.is_false(Config.is_severe(26, 4))
@@ -141,7 +141,7 @@ describe("cell statistics", function()
   end)
 
   it("keeps the fallback fit close to the measurements", function()
-    -- used only for sizes that never came from a dropdown
+    -- used only for sizes that did not come from a dropdown
     for _, size in ipairs(Config.SIZE_CHOICES) do
       for _, band in ipairs(Config.BAND_CHOICES) do
         local got = Config.fit_drillable(size, band)
@@ -204,7 +204,7 @@ describe("band colours", function()
     for name, c in pairs(colours) do
       local brightness = (c.body[1] + c.body[2] + c.body[3]) / 3
       assert.is_true(brightness < 40, name .. " body is too light: " .. brightness)
-      -- the highlight must actually be lighter, or the option is invisible
+      -- the highlight must really be lighter, or you cannot see the option
       local hl = (c.highlight[1] + c.highlight[2] + c.highlight[3]) / 3
       assert.is_true(hl >= brightness, name .. " highlight is not lighter than its body")
     end
@@ -230,7 +230,7 @@ describe("band styles", function()
   end)
 
   it("no longer offers the glowing rift", function()
-    -- removed after playtesting: it read as a hazard rather than a void
+    -- removed after playtests: it looked like a hazard, not a void
     local f = assert(io.open("prototypes/settings.lua", "r"))
     local src = f:read("*a"); f:close()
     assert.is_nil(src:find("rift", 1, true))
@@ -243,8 +243,8 @@ describe("highlight contrast", function()
   local function brightness(c) return (c[1] + c[2] + c[3]) / 3 end
 
   it("gives every colourway a clearly lighter highlight", function()
-    -- without real contrast between body and highlight the shader has nothing
-    -- to catch and the option looks like every other one
+    -- without real contrast between the body and the highlight, the shader
+    -- has nothing to show, and the option looks like all the others
     for name, c in pairs(colours) do
       local b, h = brightness(c.body), brightness(c.highlight)
       assert.is_true(h > b + 8,

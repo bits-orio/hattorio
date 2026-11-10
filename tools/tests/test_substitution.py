@@ -44,7 +44,7 @@ def test_hat_count_grows_by_inflation_factor():
 
 
 def test_hat_counts_are_squares_of_alternate_fibonacci():
-    # An exact identity: the level-n H supertile holds F(2n+3)^2 hats.
+    # An exact identity: the level-n H supertile has F(2n+3)^2 hats.
     # 4, 25, 169, 1156, 7921 = 2^2, 5^2, 13^2, 34^2, 89^2.
     fib = [0, 1]
     while len(fib) < 16:

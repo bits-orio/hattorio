@@ -1,19 +1,23 @@
--- Per-surface geometry, derived once at creation and stored.
+-- The geometry for each surface. The mod derives it once, when it creates the
+-- surface, and stores it.
 --
--- Startup settings can change between sessions. Storing the numbers the
--- terrain was actually built with means a later change affects only NEW
--- surfaces; existing ones keep their geometry and never seam. This is the one
--- idea worth taking from Hextorio's continuous_geometry flag.
+-- Startup settings can change between sessions. The mod stores the numbers
+-- that the terrain was actually built with, so a later change affects only
+-- NEW surfaces. Existing surfaces keep their geometry and never get a seam.
+-- This is the one idea worth taking from the continuous_geometry flag in
+-- Hextorio.
 
 local Config = require("mod.config")
 local planets = require("mod.planets")
 
 local Surface = {}
 
---- Name of the planet palette for this surface, or nil if it is not tiled.
+--- The name of the planet palette for this surface, or nil if the surface
+-- has no tiling.
 local function planet_of(surface)
-  -- Space platforms are never tiled, and neither is any surface we have no
-  -- palette for -- including modded planets, which fail open to vanilla.
+  -- Space platforms never get a tiling. Nor does any surface that has no
+  -- palette. That includes planets from other mods, which fail open to
+  -- vanilla terrain.
   if surface.platform then return nil end
   if planets[surface.name] then return surface.name end
   return nil
@@ -23,15 +27,16 @@ function Surface.is_tiled(surface)
   return planet_of(surface) ~= nil
 end
 
--- The size and band dropdowns hold strings, as Factorio requires for
--- allowed_values. Convert here, at the single point where settings are read.
+-- The size and band dropdowns hold strings, because Factorio requires
+-- strings for allowed_values. Convert them here, at the one place that reads
+-- the settings.
 local function read_number_setting(name, default)
   local s = settings.startup[name]
   if s == nil then return default end
   return tonumber(s.value) or default
 end
 
---- Derive and store this surface's geometry. Idempotent.
+--- Derive and store the geometry of this surface. Idempotent.
 function Surface.init(surface)
   local planet = planet_of(surface)
   if not planet then return nil end
@@ -55,11 +60,11 @@ function Surface.init(surface)
     "ore richness x%.2f (%s)",
     planet, g.size, g.band, g.depth, mult, source))
 
-  -- Some combinations the dropdowns allow leave almost nothing buildable.
-  -- At cell size 15 with a band of 4 a cell holds 46 tiles and its largest
-  -- universal square is 4x4 -- a mining drill and an assembling machine are
-  -- both 3x3, so there is no room to connect anything. Say so once rather
-  -- than let it be discovered an hour in.
+  -- Some combinations that the dropdowns allow leave almost nothing
+  -- buildable. At cell size 15 with band 4, a cell holds 46 tiles, and the
+  -- largest square that fits every cell is 4x4. A mining drill and an
+  -- assembling machine are both 3x3, so there is no room to connect anything.
+  -- Say this once, so that the player does not find out an hour later.
   if Config.is_severe(g.size, g.band) then
     local stats = Config.cell_stats(g.size, g.band)
     log(string.format(
@@ -79,11 +84,11 @@ function Surface.init(surface)
   return g
 end
 
---- The ore richness multiplier in force for a surface, and where it came from.
+--- The ore richness multiplier that a surface uses, and where it came from.
 --
--- Shared by terrain generation and the /hattorio-info command so the number a
--- player is shown is the number actually applied, not a second derivation of
--- it that could drift.
+-- Terrain generation and the /hattorio-info command both use this function.
+-- So the number that the player sees is the number that the mod applies, and
+-- not a second calculation that could drift.
 --
 -- @return multiplier, source  where source is "override" or "automatic"
 function Surface.richness(g)

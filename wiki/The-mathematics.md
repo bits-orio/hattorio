@@ -1,129 +1,143 @@
 # The mathematics
 
-Background for the curious. You do not need any of this to play.
+This page is background for readers who are curious. You do not need it to
+play.
 
-The interesting problem is not drawing the hat tiling — Craig Kaplan's
-[hatviz](https://github.com/isohedral/hatviz) does that in a browser. It is
-generating it *lazily, deterministically, and in Lua 5.2*, which is what a
-Factorio mod actually needs.
+To draw the hat tiling is easy. Craig Kaplan's
+[hatviz](https://github.com/isohedral/hatviz) does it in a browser. A Factorio
+mod must generate the tiling *lazily, deterministically and in Lua 5.2*. That
+is the interesting problem.
 
 ## Why lazy
 
-Factorio maps are effectively unbounded and generate a chunk at a time. Six
-levels of substitution is already ~400,000 hats and level 7 is hopeless, so
-nothing can be materialised up front.
+Factorio maps have no practical limit, and the game generates them one chunk
+at a time. Six levels of substitution already give about 400,000 hats, and
+level 7 is far too large. So the mod cannot build the tiling in advance.
 
-Instead the mod keeps only a root supertile and descends it per chunk,
-pruning any branch whose bounding circle misses the chunk. Cost is
-proportional to the output rather than to the tiling. About 0.7 ms per chunk
-at full depth.
+The mod keeps only one root supertile. For each chunk, it goes down from that
+root and skips each branch whose bounding circle misses the chunk. The cost
+grows with the output, not with the size of the tiling. At full depth, this
+takes about 0.7 ms per chunk.
 
 ## Why deterministic
 
-Factorio has no server authority: every client simulates the world
-independently, and any divergence is a desync rather than a visual glitch.
-So the tiling must be computed identically on every machine.
+Factorio has no server authority. Every client simulates the world on its
+own, so any difference between clients is a desync and not a visual glitch.
+Every machine must therefore calculate exactly the same tiling.
 
-The usual answer is to avoid floating point. That turns out to be the wrong
-lesson, and it cost this project a detour worth describing.
+The usual answer is to avoid floating point. That lesson was wrong here, and
+it sent this project on a long detour. The detour is worth a description.
 
 ## The detour: exact arithmetic
 
-The hat's vertices are exact integer points in the triangular lattice basis
-`{(1,0), (½, √3/2)}`, and the substitution scales by φ². So every coordinate
-lives in **ℚ(φ, √3)** — degree 4 over ℚ — and can be carried as four exact
-integers with `φ² = φ+1` and `√3² = 3` closing multiplication.
+The vertices of the hat are exact integer points in the triangular lattice
+basis `{(1,0), (½, √3/2)}`, and the substitution scales by φ². So every
+coordinate is in **ℚ(φ, √3)**, which has degree 4 over ℚ. You can store each
+coordinate as four exact integers. The identities `φ² = φ+1` and `√3² = 3`
+keep multiplication inside that form.
 
-That works beautifully offline. In Lua it collapses.
+This works very well offline. In Lua it fails.
 
-Lua 5.2 has no integer subtype — its single number type is a double in any
-standard build — so integers are exact only up to 2⁵³. (Lua 5.3 added a
-genuine 64-bit integer, which is exactly why this project's tests pin 5.2:
-running them on 5.4 would mask the all-doubles behaviour the core depends on).
-The substitution's per-level rules are exact rationals *converging on
-irrational limits*, so their numerators explode:
+Lua 5.2 has no integer subtype. In any standard build, its only number type is
+a double, so integers are exact only up to 2⁵³. Lua 5.3 added a real 64-bit
+integer. For this reason the tests of this project pin Lua 5.2: on 5.4, the
+tests would hide the all-doubles behaviour that the core depends on. The rules
+for each level of the substitution are exact rationals that *converge on
+irrational limits*. Their numerators grow very quickly:
 
-```
+```text
 level 6:  numerators 1.4e14   fine
 level 7:  numerators 1.7e16   past 2^53
 ```
 
-Worse, composing two level-6 rules produces a raw product near **10²⁸**, even
-though the reduced answer is only ~10⁹. Reducing afterwards is too late.
-Cross-reducing beforehand does not help either — the measured gcd between
-operands is 1, because the cancellation is *additive*, inside the sums,
-rather than multiplicative.
+It gets worse. When you compose two level-6 rules, the raw product is near
+**10²⁸**, but the reduced answer is only about 10⁹. To reduce after the
+product is too late. To cross-reduce before the product does not help either.
+The measured gcd between the operands is 1, because the cancellation is
+*additive* (inside the sums) and not multiplicative.
 
-Exact integers cap the descent at **depth 4**, about 546 tiles. Unshippable.
+With exact integers, the descent stops at **depth 4**, which covers about 546
+tiles. That is not enough to ship.
 
-## The resolution: doubles were always fine
+## The answer: doubles were always fine
 
-The desync risk was never floating point in general. It is `math.sin`,
-`math.cos` and `pow`, whose libm implementations genuinely differ between
-platforms.
+Floating point in general was never the desync risk. The risk is `math.sin`,
+`math.cos` and `pow`, because their libm implementations really are different
+on different platforms.
 
-IEEE-754 requires `+ − × ÷` and `sqrt` to be **correctly rounded** — they are
-bit-identical everywhere. Lua's interpreter runs each as its own VM
-instruction, so no compiler can fuse them into an FMA. Factorio 2.0 is x86-64
-only, so there is no x87 80-bit excess precision either.
+IEEE-754 requires `+ − × ÷` and `sqrt` to be **correctly rounded**, so they
+give identical bits everywhere. The Lua interpreter runs each operation as a
+separate VM instruction, so no compiler can fuse two of them into an FMA.
+Factorio 2.0 runs only on x86-64, so there is no x87 80-bit excess precision
+either.
 
-Doubles are exactly as deterministic as integers here. Only less accurate —
-and measured against exact ground truth, that inaccuracy is irrelevant:
+Here, doubles are exactly as deterministic as integers. They are only less
+accurate. We measured them against exact values, and the error does not
+matter:
 
 | depth | coverage | relative error | absolute error |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | 8 | 26,660 t | 5.7e-16 | 8e-12 tiles |
 | 10 | 183,419 t | 4.3e-16 | 7e-11 tiles |
 | 12 | 1,194,588 t | 5.3e-16 | **4e-10 tiles** |
 
-Relative error sits at machine epsilon and does not grow with depth. Depth 12
-covers the entire map with an error of four ten-billionths of a tile.
+The relative error stays at machine epsilon and does not grow with depth.
+Depth 12 covers the whole map with an error of four ten-billionths of a tile.
 
-The exact arithmetic still exists — it just stays offline, where it derives
-the rule data and proves it correct. Only the values ship.
+The exact arithmetic is still in the project, but only offline. There it
+derives the rule data and proves that the data is correct. Only the values
+ship.
 
-## Exactifying the limit metatiles
+## Exact values for the limit metatiles
 
-A side quest that produced a genuinely pretty result.
+This side project gave a very pretty result.
 
-hatviz does not store the substitution as matrices. It holds a 29-entry
-combinatorial table and computes transforms by edge-matching against the
-*current* metatile outlines, then derives the next level's outlines
-geometrically. So the outlines change level to level, converging on limiting
-φ-proportioned shapes.
+hatviz does not store the substitution as matrices. It holds a combinatorial
+table with 29 entries. It calculates the transforms by matching edges against
+the *current* metatile outlines. Then it derives the outlines for the next
+level from the geometry. So the outlines change from level to level, and they
+converge on limiting shapes with φ proportions.
 
-Those limits can be recovered. Normalising a level-22 patch and running
-integer-relation recognition gives all 36 coordinates as exact elements of
-ℚ(φ)[√3] with denominators dividing 100 — cross-checked independently at
-level 14 (10⁻⁸) and level 22 (10⁻¹⁴).
+You can recover those limits. We normalised a level-22 patch and ran
+integer-relation recognition on it. The result gives all 36 coordinates as
+exact elements of ℚ(φ)\[√3\], with denominators that divide 100. We checked
+this independently at level 14 (10⁻⁸) and level 22 (10⁻¹⁴).
 
-And they are an **exact fixed point**: substituting them reproduces them
-scaled by φ², equal as ring elements, not merely close. The resulting
-self-similar rule set has maximum coefficient **219**, against 4.8×10²⁶ for
-the per-level rules.
+These limits are an **exact fixed point**. If you substitute them, you get the
+same shapes scaled by φ². They are equal as ring elements, not only close. The
+self-similar rule set that results has a maximum coefficient of **219**. The
+rules for each level have a maximum of 4.8×10²⁶.
 
-It does not, however, solve the depth problem — because a self-similar rule
-set cannot reach the hats. Substituting a decorated tile maps 4 hats to 25
-smaller ones, so the decoration is not scale-invariant: hats exist only at
-level 0, anchored to the original shapes. Attaching them to a self-similar
-descent gives correct counts and congruent hats but real overlaps and gaps.
+But this does not solve the depth problem, because a self-similar rule set
+cannot reach the hats. A substitution maps the 4 hats on a decorated tile to
+25 smaller hats, so the decoration does not stay the same under scaling. Hats
+exist only at level 0, where they attach to the original shapes. If you attach
+them to a self-similar descent, the counts are correct and the hats are
+congruent, but real overlaps and gaps appear.
 
-A satisfying result that turned out to be unnecessary once doubles solved the
-problem outright. Both are recorded in the design spec.
+The result was satisfying, but the project did not need it after doubles
+solved the problem. The design spec records both.
 
-## How it is checked
+## How we check it
 
-The offline pipeline verifies every patch for overlapping hats, gaps by
-flood-fill, reflected-hat density converging to 1/(φ⁴+1) ≈ 12.73%, and hat
-counts matching **F(2n+3)²** exactly — 4, 25, 169, 1,156, 7,921. It then
-exports a golden fixture that the Lua descent must reproduce.
+The offline pipeline checks every patch:
 
-That last check is the important one: it validates the code that ships
-against the arithmetic that was proved correct.
+- no hats overlap
+- a flood fill finds no gaps
+- the density of reflected hats converges to 1/(φ⁴+1) ≈ 12.73%
+- the hat counts match **F(2n+3)²** exactly: 4, 25, 169, 1,156, 7,921
+
+The pipeline then exports a golden fixture, and the Lua descent must produce
+the same result.
+
+That last check is the most important one. It tests the code that ships
+against the arithmetic that we proved correct.
 
 ## Further reading
 
-- [An aperiodic monotile](https://arxiv.org/abs/2303.10798) — the original paper
-- [hatviz](https://github.com/isohedral/hatviz) — Kaplan's reference implementation
-- [The design spec](https://github.com/vetkat/hattorio/blob/main/docs/design/hattorio-design.md)
-  — including a long section on everything that turned out to be wrong
+- [An aperiodic monotile](https://arxiv.org/abs/2303.10798): the original
+  paper
+- [hatviz](https://github.com/isohedral/hatviz): Kaplan's reference
+  implementation
+- [The design spec](https://github.com/vetkat/hattorio/blob/main/docs/design/hattorio-design.md):
+  includes a long section on everything that turned out to be wrong

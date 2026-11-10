@@ -109,7 +109,7 @@ class Xf:
 
 
 def match_two(p1: Pt, p2: Pt, q1: Pt, q2: Pt) -> Xf:
-    """The orientation-preserving similarity carrying p1 -> q1 and p2 -> q2."""
+    """The orientation-preserving similarity that takes p1 -> q1 and p2 -> q2."""
     u = p2 - p1
     v = q2 - q1
     den = u.x * u.x + u.y * u.y
@@ -135,7 +135,7 @@ def hex_pt(x, y) -> Pt:
     return _p(F(x) + F(y, 2), F(y, 2))
 
 
-# The hat is a 13-gon. Verbatim from hatviz geometry.js.
+# The hat is a 13-gon. Copied exactly from geometry.js in hatviz.
 HAT_OUTLINE = [
     hex_pt(0, 0), hex_pt(-1, -1), hex_pt(0, -2), hex_pt(2, -2),
     hex_pt(2, -1), hex_pt(4, -2), hex_pt(5, -1), hex_pt(4, 0),

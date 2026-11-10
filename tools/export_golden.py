@@ -1,4 +1,5 @@
-"""Export a reference hat set that the Lua descent must reproduce exactly."""
+"""Export a reference set of hats. The Lua descent must produce exactly the same
+set."""
 from __future__ import annotations
 
 import pathlib

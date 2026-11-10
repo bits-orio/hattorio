@@ -1,10 +1,11 @@
--- Render a patch of the hat tiling to SVG, straight from the Lua descent.
--- This exercises the shipped code path, not the offline pipeline.
+-- Render a patch of the hat tiling to SVG, directly from the Lua descent.
+-- This runs the code that ships, not the offline pipeline.
 --
 --   lua5.2 tools/render.lua [depth] [unit] [half-extent] [out.svg]
 --
--- Colours follow the usual presentation of this tiling: reflected hats (about
--- 1 in 8, unavoidable) in dark blue, the rest shaded by orientation.
+-- The colours follow the usual presentation of this tiling. Reflected hats
+-- (about 1 in 8, and necessary) are dark blue. The other hats are shaded by
+-- orientation.
 
 package.path = "./?.lua;" .. package.path
 
@@ -24,8 +25,8 @@ local t = Ti.new({ unit = unit, depth = depth })
 local box = { left = -extent, top = -extent, right = extent, bottom = extent }
 local hats = t:hats_in_box(box)
 
--- orientation class from the linear part; atan2 is fine here, this is a dev
--- tool and never ships.
+-- the orientation class, from the linear part. atan2 is fine here, because
+-- this is a development tool and never ships.
 local function shade(h)
   if h.reflected then return REFLECTED end
   local ang = math.atan2(h.xf[4], h.xf[1])

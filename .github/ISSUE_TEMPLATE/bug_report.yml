@@ -25,7 +25,7 @@ body:
     attributes:
       label: Hat size and band width
       description: From the mod settings, per planet if they differ.
-      placeholder: "26 / 2 (default)"
+      placeholder: "41 / 3 (default)"
   - type: textarea
     id: what
     attributes:

@@ -3,8 +3,8 @@
 An element of Q(phi) is p + q*phi with phi^2 = phi + 1.
 An element of K is x + y*sqrt(3) with x, y in Q(phi).
 
-Division lives here and only here: matchTwo normalises by segment length.
-The shipped Lua ring has no division at all.
+Only this module has division, because matchTwo normalises by the length of
+a segment. The Lua ring that ships has no division at all.
 """
 from __future__ import annotations
 

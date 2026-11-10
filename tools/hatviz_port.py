@@ -1,7 +1,7 @@
 """Level-0 metatiles, ported from hatviz (BSD-3-Clause). See THIRD_PARTY.md.
 
-hatviz writes vertices as pt(x, k*hr3) with hr3 = sqrt(3)/2, so a y of k*hr3
-is (k/2)*sqrt(3). The _p() helper below takes that halved coefficient.
+hatviz writes vertices as pt(x, k*hr3), with hr3 = sqrt(3)/2. So a y of k*hr3
+is (k/2)*sqrt(3). The _p() helper below takes that half coefficient.
 """
 from __future__ import annotations
 

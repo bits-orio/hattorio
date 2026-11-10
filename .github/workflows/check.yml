@@ -27,7 +27,7 @@ jobs:
               assert k in d, k
           print('manifest ok:', d['name'], d['version'])
           "
-      # Catch version drift on every push, not only when a release is cut.
+      # Find version drift on every push, not only when we make a release.
       - name: check version consistency
         run: python3 tools/check_version.py
 
@@ -36,8 +36,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # Factorio embeds Lua 5.2.1; testing on anything newer would mask the
-      # all-doubles behaviour the core depends on.
+      # Factorio embeds Lua 5.2.1. A test on a newer version would hide the
+      # all-doubles behaviour that the core depends on.
       - uses: leafo/gh-actions-lua@v10
         with:
           luaVersion: "5.2"

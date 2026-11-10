@@ -2,65 +2,69 @@
 
 **Factorio, but the ground is an aperiodic tiling.**
 
-Your factory is built on the "hat" monotile — the shape discovered in 2023
-that tiles the plane and never repeats. Every cell is a hat. No two are quite
-alike. Your blueprints will not save you.
+You build your factory on the "hat" monotile. This shape was discovered in
+2023. It tiles the plane and the pattern never repeats. Every cell is a hat,
+and no two cells are quite the same. Your blueprints will not save you.
 
 ![The tiling](https://raw.githubusercontent.com/vetkat/hattorio/main/docs/preview/tiling.png)
 
-> **Released as 0.1.0**, on
-> [the mod portal](https://mods.factorio.com/mod/hattorio). Multiplayer has
-> not been verified yet, so play single player for now.
+> **Released as 1.0.0**, on
+> [the mod portal](https://mods.factorio.com/mod/hattorio). Nobody has
+> verified multiplayer yet, so play single player for now.
 
 ## How it plays
 
-Each hat is a buildable **cell**. Between cells runs a narrow **band** you
-cannot build on. You can walk and drive across it freely, and underground
-belts and pipes tunnel underneath — but nothing gets built there.
+Each hat is a buildable **cell**. A narrow **band** runs between the cells,
+and you cannot build on it. You can walk and drive across a band freely, and
+underground belts and pipes can pass under it. You cannot build anything on
+the band itself.
 
-That one rule is the whole mod, and it changes everything downstream.
+That one rule is the whole mod, and it changes everything that follows.
 
 ### Your blueprint library stops working
 
-Not because of rotation. Because **every cell is a different shape**.
+Rotation is not the cause. **Every cell has a different shape.**
 
-Hat cells sit at irrational offsets from Factorio's tile grid, so each one
-rounds onto the squares differently. Measured across 1,156 cells at default
-settings: **885 distinct buildable shapes**, with no single shape covering
-more than 0.5% of the map.
+The hat cells sit at irrational offsets from Factorio's tile grid, so each cell
+rounds onto the squares in a different way. We measured 1,156 cells at the
+default settings and found **885 different buildable shapes**. No single shape
+covers more than 0.5% of the map.
 
-A layout that fills one cell will not fit the next one along.
+A layout that fills one cell will not fit the next one.
 
-### Small blueprints still travel
+### Small blueprints still work everywhere
 
-This is not a mod about deleting blueprints. Anything that fits in an 11×11
-square works in every cell at the default size — an assembler and its
-inserters, a splitter bank, a small power block.
+This mod does not delete blueprints. At the default size, anything that fits
+in a 17×17 square works in every cell. Examples are an assembler and its
+inserters, a bank of splitters or a small power block.
 
-What dies is anything that wants to *use* a cell efficiently. Fill the space
-and you have fitted it to that cell and nowhere else.
+A blueprint that tries to *use* a cell efficiently fails. If you fill the
+space, you fit the layout to that cell and to no other.
 
-### Getting between cells is the interesting part
+### The interesting part is to move between cells
 
-Belts cross a band by underground pair. Bands are never axis-aligned, so the
-crossing is never tidy. Rails are exempt and cross freely — trains still
-work. Power poles and bots ignore the ground entirely.
+Belts cross a band with an underground pair. Bands are never parallel to an
+axis, so a crossing is never tidy. Rails are exempt and cross freely, so
+trains still work. Power poles and bots ignore the ground.
 
-The factories that come out of this are not ugly by accident. They are fitted.
+The factories that you build here are not ugly by accident. They fit their
+ground.
 
 ![In-game appearance](https://raw.githubusercontent.com/vetkat/hattorio/main/docs/preview/bands-26-2.png)
 
 ## Where to go next
 
-- **[Settings](Settings)** — hat size is the dial that matters. Start here.
-- **[Building in hats](Building-in-hats)** — practical advice for your first base.
-- **[The mathematics](The-mathematics)** — how the tiling is generated, for
-  the curious. Not needed to play.
+- **[Settings](Settings):** hat size is the most important setting. Start
+  here.
+- **[Building in hats](Building-in-hats):** practical advice for your first
+  base.
+- **[The mathematics](The-mathematics):** how the mod generates the tiling.
+  You do not need this to play.
 
 ## Credits
 
-The hat monotile was discovered by David Smith, Joseph Samuel Myers, Craig S.
-Kaplan and Chaim Goodman-Strauss in 2023. The substitution structure is
-derived from Kaplan's [hatviz](https://github.com/isohedral/hatviz).
+David Smith, Joseph Samuel Myers, Craig S. Kaplan and Chaim Goodman-Strauss
+discovered the hat monotile in 2023. The substitution structure comes from
+Kaplan's [hatviz](https://github.com/isohedral/hatviz).
 [Hextorio](https://github.com/sOvr9000/hextorio) did this for hexagons first
 and solved several of the same problems.

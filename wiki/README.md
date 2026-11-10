@@ -1,13 +1,15 @@
 # Wiki source
 
 These pages are the source for the GitHub wiki. The wiki is a separate git
-repository, and GitHub will not create it until the first page exists.
+repository. GitHub creates it only when the first page exists.
 
-**To publish**, once you have created any page through the web UI at
-https://github.com/vetkat/hattorio/wiki :
+**To publish**, first create any page in the web UI at
+<https://github.com/vetkat/hattorio/wiki>. Then run:
 
-    make wiki
+```bash
+make wiki
+```
 
-That clones the wiki repo, copies these files over, and pushes. Edit here and
-re-run it rather than editing in the browser, so the pages stay under review
-with everything else.
+This command clones the wiki repository, copies these files into it and
+pushes. Edit the pages here and run the command again. Do not edit them in the
+browser. That way the pages get the same review as everything else.

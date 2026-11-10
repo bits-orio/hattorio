@@ -1,16 +1,17 @@
--- Terrain generation: paint bands into each chunk as it is generated.
+-- Terrain generation: paint the bands into each chunk when it generates.
 --
--- Painting once at generation means zero per-tick cost. Nothing about the
--- bands is persisted beyond the tiles themselves and the per-surface geometry:
--- the tiling is derived from that geometry and rebuilt on load.
+-- The mod paints once, at generation, so there is no cost per tick. The save
+-- keeps only the tiles and the geometry for each surface. The mod derives
+-- the tiling from that geometry and builds it again on load.
 
 local Ti = require("hat.tiling")
 local Surface = require("mod.surface")
 local Bands = require("mod.bands")
 local Outline = require("mod.outline")
 
--- Derived state, keyed by surface index. Deliberately NOT in storage: it is
--- reconstructible from the stored geometry, and a tiling holds closures.
+-- Derived state, keyed by surface index. It is deliberately NOT in storage.
+-- The mod can build it again from the stored geometry, and a tiling holds
+-- closures.
 local tilings = {}
 
 local function tiling_for(surface)
@@ -42,12 +43,12 @@ local function paint_chunk(surface, area)
   local tiles = {}
   for i = 1, #band do
     local p = band[i]
-    -- Never pave water: a band across a lake would fill it, and vanilla
+    -- Never pave water. A band across a lake would fill it, and the vanilla
     -- shore transitions would be lost.
     --
-    -- Factorio's LuaObject methods take dot notation and no self, so this is
-    -- surface.get_tile(x, y) -- caching the function and passing `surface`
-    -- would silently put the surface where x belongs.
+    -- Factorio's LuaObject methods use dot notation and take no self. So this
+    -- is surface.get_tile(x, y). If you cache the function and pass
+    -- `surface`, the surface goes where x belongs, and no error appears.
     if not surface.get_tile(p.x, p.y).collides_with("water_tile") then
       tiles[#tiles + 1] = {
         name = p.mirror and g.mirror_tile or g.tile,
@@ -57,17 +58,17 @@ local function paint_chunk(surface, area)
   end
   if #tiles == 0 then return end
 
-  -- remove_colliding_entities = false: ore, trees and rocks already placed on
-  -- a band stay put. Ore there is simply out of reach of a 3x3 drill, which
-  -- the richness multiplier compensates for.
+  -- remove_colliding_entities = false: ore, trees and rocks that are already
+  -- on a band stay where they are. Ore on a band is out of the reach of a 3x3
+  -- drill, and the richness multiplier compensates for it.
   surface.set_tiles(tiles, true, false, false, false)
 end
 
---- Raise ore richness to offset what the bands put out of reach.
+--- Raise ore richness to offset the ore that the bands put out of reach.
 --
--- Applied per chunk as it generates, so it never touches ore a player has
--- already mined. Infinite resources are skipped: their yield is a percentage,
--- and scaling that would be wrong.
+-- The mod applies this to each chunk when it generates, so it never changes
+-- ore that a player has already mined. It skips infinite resources: their
+-- yield is a percentage, and it would be wrong to scale it.
 local function compensate_resources(surface, area)
   local g = Surface.get(surface)
   if not g then return end
@@ -114,27 +115,27 @@ script.on_event(defines.events.on_player_changed_surface, function(event)
   Outline.clear(event.player_index)
 end)
 
--- Derived state only; rebuilt lazily on next use.
+-- Derived state only. The mod builds it again when it next needs it.
 script.on_load(function()
   tilings = {}
   Outline.reset()
 end)
 
---- Warn when the mod is added to a world that already has terrain.
+--- Warn when a player adds the mod to a world that already has terrain.
 --
--- Bands are painted as chunks generate, so chunks that already existed keep
--- their vanilla terrain forever. The result is a hard, permanent line between
--- the old area and everything explored afterwards. Nothing can fix that
--- retroactively without regenerating the map, so the least we can do is say
--- so rather than let it be discovered later.
+-- The mod paints bands when chunks generate, so chunks that already existed
+-- keep their vanilla terrain for ever. The result is a hard, permanent line
+-- between the old area and everything explored after it. Only a new map can
+-- fix that. So the mod at least says so, and the player does not find out
+-- later.
 local function warn_if_added_mid_save(data)
   local change = data and data.mod_changes and data.mod_changes["hattorio"]
   if not (change and change.old_version == nil) then return end
 
   for _, surface in pairs(game.surfaces) do
     if Surface.is_tiled(surface) then
-      -- is_chunk_generated on the origin is a cheap proxy for "this world has
-      -- been played": a brand new surface has nothing generated yet.
+      -- is_chunk_generated on the origin is a cheap test for "somebody has
+      -- played this world". A new surface has no generated chunks yet.
       if surface.is_chunk_generated({ 0, 0 }) then
         game.print("[Hattorio] Added to a world that already has terrain. " ..
           "Existing chunks keep their vanilla ground and will never grow " ..

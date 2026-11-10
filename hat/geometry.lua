@@ -1,8 +1,8 @@
--- Hat outline and world-space geometry.
+-- Hat outline and geometry in world space.
 --
--- The hat is a 13-gon (hatviz's hat_outline in the hexPt basis), not the
--- 14-gon the original scaffold carried. H_init indexes hat_outline[5], [7],
--- [9] and [11], so a wrong vertex list silently produces wrong placements.
+-- The hat is a 13-gon (hat_outline from hatviz, in the hexPt basis). The first
+-- scaffold used a 14-gon, which was wrong. H_init reads hat_outline[5], [7],
+-- [9] and [11], so a wrong vertex list gives wrong placements with no error.
 
 local T = require("hat.transform")
 local DATA = require("data.hat_geometry")

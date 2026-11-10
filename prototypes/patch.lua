@@ -1,28 +1,31 @@
--- data-final-fixes, so this sees every entity every other mod has added.
+-- This runs in data-final-fixes, so it sees every entity that every other mod
+-- has added.
 --
--- Two prototypes collide only if they SHARE a collision layer. Giving
--- buildable structures the band layer makes the game refuse to place them on
--- a band natively: red preview, blueprints skip the tiles, construction bots
--- never attempt them, and no ghosts are left behind. Script-side rejection
--- would place the entity and then remove it, which is visibly worse and needs
--- four event handlers plus ghost cleanup to approximate this.
+-- Two prototypes collide only if they SHARE a collision layer. When buildable
+-- structures get the band layer, the game itself refuses to place them on a
+-- band: the preview is red, blueprints skip the tiles, construction bots never
+-- try, and no ghosts remain. Rejection in a script would place the entity and
+-- then remove it. That looks worse, and it needs four event handlers and ghost
+-- cleanup to get close to this result.
 --
--- CAREFUL: a prototype that does not declare collision_mask inherits a
--- per-type default. Assigning a fresh mask would WIPE that default and strip
--- the entity of its normal collisions. collision_mask_util.get_mask returns
--- the explicit mask or the type default, which is the only safe way to read
--- it in the data stage.
+-- CAREFUL: a prototype that does not declare collision_mask gets a default
+-- for its type. A new mask would REPLACE that default and remove the normal
+-- collisions of the entity. collision_mask_util.get_mask returns the explicit
+-- mask or the default for the type. It is the only safe way to read the mask
+-- in the data stage.
 
 local cmu = require("__core__/lualib/collision-mask-util")
 
 local LAYER = "hattorio_band"
 
--- Player-built structures. Deliberately ABSENT, each for a reason:
---   * rails, signals, ramps  -- the spec exempts rails so trains still work
---   * vehicles               -- you must be able to drive across a band
---   * character              -- you must be able to walk across a band
---   * tree, cliff, resource, enemy types -- placed by map generation, and
---     must be free to sit on a band; blocking them would fight terrain gen
+-- Structures that players build. These are deliberately ABSENT, each for a
+-- reason:
+--   * rails, signals, ramps: the spec exempts rails, so trains still work
+--   * vehicles: you must be able to drive across a band
+--   * character: you must be able to walk across a band
+--   * tree, cliff, resource and enemy types: map generation places them, and
+--     they must be able to sit on a band. To block them would work against
+--     terrain generation.
 local BLOCKED_TYPES = {
   "accumulator", "agricultural-tower", "ammo-turret", "arithmetic-combinator",
   "artillery-turret", "assembling-machine", "asteroid-collector", "beacon",
@@ -45,8 +48,9 @@ local patched, skipped = 0, 0
 
 for _, type_name in ipairs(BLOCKED_TYPES) do
   for name, proto in pairs(data.raw[type_name] or {}) do
-    -- get_mask errors on a type it has no default for, which a mod can
-    -- introduce. Failing open (buildable on bands) beats failing to load.
+    -- get_mask raises an error for a type that has no default, and a mod can
+    -- add such a type. To fail open (buildable on bands) is better than to
+    -- fail to load.
     local ok, mask = pcall(cmu.get_mask, proto)
     if ok and mask then
       mask.layers = mask.layers or {}

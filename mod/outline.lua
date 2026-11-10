@@ -1,12 +1,13 @@
--- Optional per-player overlay: a line down the centre of each band.
+-- Optional overlay for each player: a line down the centre of each band.
 --
--- Per player because it is pure presentation -- one player turning it on
--- cannot change the terrain or what anyone else sees. The render objects are
--- created with `players = {index}` so they are genuinely private.
+-- It is per player because it is only presentation. If one player turns it
+-- on, the terrain does not change, and nobody else sees a difference. The
+-- render objects are created with `players = {index}`, so they really are
+-- private.
 --
--- Render objects are game state, so they are tracked in `storage` rather than
--- a module local: a module local would be lost across save/load and the
--- objects would leak, accumulating every time the save was reloaded.
+-- Render objects are game state, so `storage` tracks them, not a module
+-- local. A module local would be lost on save and load. The objects would
+-- leak, and more would collect every time the save was loaded again.
 
 local Ti = require("hat.tiling")
 local G = require("hat.geometry")
@@ -14,9 +15,9 @@ local Surface = require("mod.surface")
 
 local Outline = {}
 
--- How far around the player to draw, and how far they may move before it is
--- redrawn. Redrawing on every move would be wasteful; never redrawing would
--- leave the overlay behind.
+-- How far around the player to draw, and how far the player can move before
+-- the overlay is drawn again. To draw again on every move would waste time.
+-- If it never drew again, the overlay would stay behind.
 local RADIUS = 64
 local MOVE_BEFORE_REDRAW = 24
 
@@ -77,7 +78,8 @@ local function draw(player)
   storage.outlines[player.index] = { objects = objects, x = pos.x, y = pos.y }
 end
 
---- Bring one player's overlay up to date. Cheap when nothing has changed.
+--- Update the overlay of one player. This is cheap when nothing has
+-- changed.
 function Outline.refresh(player)
   if not (player and player.valid and player.connected) then return end
 

@@ -1,21 +1,22 @@
 local planets = require("mod.planets")
 
--- STARTUP, not runtime. The geometry decides terrain, so changing it under an
--- existing save would leave every generated chunk built to the old geometry.
--- mod/surface.lua stores the values per surface at creation, so a later change
--- affects only NEW surfaces and nothing ever seams.
+-- STARTUP, not runtime. The geometry controls the terrain. If it changed in
+-- an existing save, every generated chunk would keep the old geometry.
+-- mod/surface.lua stores the values for each surface when it creates the
+-- surface. So a later change affects only NEW surfaces, and no seams appear.
 --
--- The bounds are repeated here rather than required from mod/config.lua: the
--- settings stage cannot load a module that pulls in hat/tiling.lua's generated
--- data. A test in spec/config_spec.lua keeps the two in step.
+-- The bounds are copied here and not loaded from mod/config.lua. The settings
+-- stage cannot load a module that loads the generated data of
+-- hat/tiling.lua. A test in spec/config_spec.lua keeps the two copies the
+-- same.
 local settings_list = {}
 local order = 0
 
 for planet, _ in pairs(planets) do
   order = order + 1
-  -- Dropdowns rather than sliders: the difficulty of a given size is not
-  -- obvious from the number, and the interesting range is four values, not
-  -- seventy-six. Values are strings, as Factorio requires for a dropdown, and
+  -- Dropdowns, not sliders. The number does not show how hard a size is,
+  -- and the interesting range is four values, not seventy-six. The values
+  -- are strings, because Factorio requires strings for a dropdown.
   -- mod/surface.lua converts them.
   settings_list[#settings_list + 1] = {
     type = "string-setting",
@@ -35,7 +36,8 @@ for planet, _ in pairs(planets) do
   }
 end
 
--- Band appearance. Startup, because it selects which tile prototypes exist.
+-- Band appearance. This is a startup setting, because it selects which tile
+-- prototypes exist.
 settings_list[#settings_list + 1] = {
   type = "string-setting",
   name = "hattorio-band-style",
@@ -45,10 +47,10 @@ settings_list[#settings_list + 1] = {
   order = "c[style]-a[style]",
 }
 
--- Band colour, independent of style: any colourway works with any shader.
--- Deep violet by default -- it is the only option that reads as deliberate
--- rather than as dark ground, since every body colour here is near-black and
--- it is the highlight that distinguishes them.
+-- Band colour. It is independent of the style: every colour works with every
+-- shader. The default is deep violet. It is the only option that looks
+-- deliberate and not like dark ground. Every body colour here is nearly black,
+-- and the highlight is what makes them different.
 settings_list[#settings_list + 1] = {
   type = "string-setting",
   name = "hattorio-band-colour",
@@ -58,9 +60,9 @@ settings_list[#settings_list + 1] = {
   order = "c[style]-b[colour]",
 }
 
--- Map-scoped, because ore is shared between everyone on it. 0 means "use the
--- automatic compensation derived from cell size and band width"; any other
--- value replaces it outright.
+-- Map scope, because everyone on the map shares the ore. 0 means "use the
+-- automatic compensation from the cell size and band width". Any other value
+-- replaces it completely.
 settings_list[#settings_list + 1] = {
   type = "double-setting",
   name = "hattorio-richness-override",
@@ -71,8 +73,8 @@ settings_list[#settings_list + 1] = {
   order = "d[richness]",
 }
 
--- Per player, because it is pure presentation: one player having the overlay
--- on cannot affect what anyone else sees or what the terrain is.
+-- Per player, because it is only presentation. If one player turns the
+-- overlay on, that does not change what anyone else sees, or the terrain.
 settings_list[#settings_list + 1] = {
   type = "bool-setting",
   name = "hattorio-show-outline",

@@ -1,6 +1,6 @@
-# lua52-busted on Arch installs the rock off PATH and its shebang points at
-# lua 5.5, where the 5.2 modules do not exist. Prefer a busted on PATH (CI,
-# most distros) and fall back to the Arch rock path.
+# On Arch, lua52-busted installs the rock outside PATH, and its shebang points
+# at lua 5.5, where the 5.2 modules do not exist. Use a busted on PATH if there
+# is one (CI, most distros). If not, use the Arch rock path.
 ARCH_BUSTED := /usr/lib/luarocks/rocks-5.2/busted/2.3.0-1/bin/busted
 LUA         := lua5.2
 BUSTED      := $(shell command -v busted 2>/dev/null)
@@ -15,7 +15,7 @@ endif
 
 all: check
 
-## Lua test suite, under the version Factorio embeds
+## Lua test suite, under the Lua version that Factorio embeds
 test:
 	$(RUN_BUSTED)
 
@@ -42,7 +42,7 @@ lint:
 
 check: version pytest test lint
 
-## check info.json, changelog and tag agree
+## check that info.json, the changelog and the tag agree
 version:
 	python3 tools/check_version.py
 
@@ -50,7 +50,7 @@ version:
 package:
 	python3 tools/package.py
 
-## publish wiki/ to the GitHub wiki (needs one page created in the UI first)
+## publish wiki/ to the GitHub wiki (first create one page in the web UI)
 wiki:
 	@rm -rf .wiki-tmp
 	git clone -q git@github.com:vetkat/hattorio.wiki.git .wiki-tmp || \

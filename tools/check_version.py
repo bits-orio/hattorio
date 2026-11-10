@@ -1,8 +1,8 @@
-"""Verify the version is consistent everywhere it appears.
+"""Check that the version is the same everywhere it appears.
 
-info.json is the single source of truth. Everything else must agree with it:
-the changelog must document that version, and a release tag must name it.
-Drift here is how a mod portal page ends up describing a build nobody has.
+info.json is the only source of truth, and everything else must agree with
+it. The changelog must document that version, and a release tag must name it.
+If they drift apart, the mod portal page can describe a build that nobody has.
 
     python3 tools/check_version.py            # info.json vs changelog
     python3 tools/check_version.py v0.2.0     # also check a release tag
@@ -41,8 +41,8 @@ def main(argv: list[str]) -> int:
             f"changelog.txt leads with {versions[0]}, but info.json says {version}; "
             "the newest release must come first")
 
-    # Factorio refuses to load a mod whose changelog separator is malformed,
-    # and the message it gives is not obvious.
+    # Factorio does not load a mod if its changelog separator is malformed,
+    # and the error message does not make the cause clear.
     first = changelog.splitlines()[0] if changelog else ""
     if len(first) != 99 or set(first) != {"-"}:
         problems.append("changelog.txt must start with exactly 99 dashes")

@@ -33,7 +33,8 @@ def test_match_two_maps_the_segment():
 
 
 def test_hat_outline_has_13_exact_vertices():
-    # The hat is a 13-gon, not a 14-gon. Verbatim from hatviz geometry.js.
+    # The hat is a 13-gon, not a 14-gon. Copied exactly from geometry.js in
+    # hatviz.
     assert len(HAT_OUTLINE) == 13
     for p in HAT_OUTLINE:
         assert p.x.denominator() in (1, 2)

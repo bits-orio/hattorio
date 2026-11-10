@@ -1,23 +1,24 @@
 #!/bin/sh
 # Upload a built mod zip to the Factorio mod portal.
 #
-#   FACTORIO_API_KEY=... sh tools/publish_mod.sh build/hattorio_0.1.0.zip
+#   FACTORIO_API_KEY=... sh tools/publish_mod.sh build/hattorio_1.0.0.zip
 #
 # The key comes from https://factorio.com/profile and needs the
 # "ModPortal: Upload Mods" permission.
 #
-# Two steps, per https://wiki.factorio.com/Mod_upload_API :
-#   1. POST the mod name to init_upload, which returns a one-shot upload_url
-#   2. POST the zip to that URL
+# There are two steps (see https://wiki.factorio.com/Mod_upload_API):
+#   1. POST the mod name to init_upload. It returns an upload_url that works
+#      once.
+#   2. POST the zip to that URL.
 #
-# A portal release cannot be withdrawn once accepted, so every check that can
-# run before this point should already have run.
+# After the portal accepts a release, you cannot withdraw it. So every check
+# that can run before this point must already have run.
 #
 #   FACTORIO_API_KEY=... sh tools/publish_mod.sh --check
 #
-# --check runs only step 1, which validates the key and the mod name without
-# publishing anything: a release reaches the portal only when the zip is
-# POSTed in step 2.
+# --check runs only step 1. It validates the key and the mod name and
+# publishes nothing. A release reaches the portal only when step 2 POSTs the
+# zip.
 set -e
 
 ZIP="$1"
@@ -44,17 +45,17 @@ INIT=$(curl -sS -X POST \
   -F "mod=$MOD" \
   https://mods.factorio.com/api/v2/mods/releases/init_upload)
 
-# A key that works but names a mod the portal has never seen reports
+# If the key works but the portal does not know the mod, the answer is
 # UnknownMod. That is the expected answer before the first manual upload, and
-# it still proves the key is good -- so report it distinctly rather than as a
-# flat failure.
-# Three outcomes worth telling apart:
+# it still proves that the key is good. So report it separately, not as a
+# plain failure.
+# Three results must be kept apart:
 #   upload_url    the key works and the portal knows this mod
-#   UnknownMod    the key works; the mod has never been uploaded. Expected
-#                 before the first manual upload, so a CHECK treats it as a
-#                 pass -- the key is what is being tested -- while a real
-#                 publish must still fail.
-#   InvalidApiKey the key is wrong or lacks the upload permission
+#   UnknownMod    the key works, but nobody has uploaded the mod yet. This is
+#                 expected before the first manual upload. A CHECK tests the
+#                 key, so it counts this as a pass. A real publish must still
+#                 fail.
+#   InvalidApiKey the key is wrong or does not have the upload permission
 STATUS=$(printf '%s' "$INIT" | CHECK_ONLY="$CHECK_ONLY" MOD="$MOD" python3 -c "
 import json, os, sys
 d = json.load(sys.stdin)

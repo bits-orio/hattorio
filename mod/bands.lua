@@ -1,18 +1,20 @@
--- Which tiles of an area fall on a band.
+-- Finds the tiles of an area that are on a band.
 --
--- Pure: no Factorio API, so this runs under plain Lua in CI. A tile is a band
--- tile when its centre lies within half the band width of any hat edge.
+-- Pure: this module does not use the Factorio API, so it runs under plain Lua
+-- in CI. A tile is a band tile if its centre is within half the band width of
+-- any hat edge.
 --
--- PERFORMANCE. The obvious implementation -- test every tile against every
--- edge -- is O(tiles x hats x edges) and measured 39.7 ms per chunk, fifty
--- times the cost of the tiling descent itself. Instead each edge is
--- rasterised into its own bounding box, clipped to the area, which touches
--- only tiles that could possibly be near it.
+-- PERFORMANCE. The obvious method tests every tile against every edge. That
+-- is O(tiles x hats x edges), and it took 39.7 ms per chunk in measurement,
+-- fifty times the cost of the tiling descent. This module rasterises each
+-- edge into its own bounding box, clipped to the area. So it looks only at
+-- tiles that can be near the edge.
 --
--- Mirror marking: a reflected hat paints its own edges in the mirror variant,
--- and where a reflected and an unreflected hat share an edge the reflected one
--- wins. That is an OR over the hats covering a tile, so it does not depend on
--- iteration order -- which matters, because two clients must agree.
+-- Mirror marking: a reflected hat paints its own edges in the mirror variant.
+-- Where a reflected hat and an unreflected hat share an edge, the reflected
+-- hat wins. That is an OR over the hats that cover a tile, so the result does
+-- not depend on the iteration order. This is important, because two clients
+-- must agree.
 
 local G = require("hat.geometry")
 
@@ -23,13 +25,13 @@ local floor, ceil = math.floor, math.ceil
 --- @param tiling  a hat.tiling instance
 --- @param geom    from mod.config.geometry, plus tile names
 --- @param area    { left, top, right, bottom } in tile coordinates; right and
----               bottom are exclusive, matching Factorio's chunk areas
+---               bottom are exclusive, the same as Factorio's chunk areas
 --- @return array of { x = , y = , mirror = boolean }, in scan order
 function Bands.for_area(tiling, geom, area)
   local unit, half = geom.unit, geom.half
 
-  -- Query wider than the area: a hat centred outside it can still own an edge
-  -- running through it.
+  -- Query a box larger than the area. A hat with its centre outside the area
+  -- can still have an edge that crosses it.
   local pad = geom.band + 2
   local hats = tiling:hats_in_box({
     left = area.left - pad, top = area.top - pad,
@@ -50,7 +52,7 @@ function Bands.for_area(tiling, geom, area)
       local s = edges[j]
       local x1, y1, x2, y2 = s[1], s[2], s[3], s[4]
 
-      -- only the tiles within `half` of this segment's bounding box can match
+      -- only tiles within `half` of the bounding box of this segment can match
       local lo_x = floor((x1 < x2 and x1 or x2) - half)
       local hi_x = ceil((x1 > x2 and x1 or x2) + half)
       local lo_y = floor((y1 < y2 and y1 or y2) - half)
@@ -81,7 +83,8 @@ function Bands.for_area(tiling, geom, area)
     end
   end
 
-  -- Emit in scan order so the result never depends on hat iteration order.
+  -- Emit in scan order, so that the result never depends on the order of the
+  -- hats.
   local out = {}
   for ty = top, bottom do
     local row = rows[ty]

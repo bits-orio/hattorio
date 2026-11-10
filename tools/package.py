@@ -1,10 +1,11 @@
-"""Build a mod zip Factorio will accept.
+"""Build a mod zip that Factorio accepts.
 
-The archive must contain a single top-level directory named <name>_<version>
-with info.json at its root. Development files -- tests, the offline pipeline,
-docs, wiki source, CI config -- never ship.
+The archive must contain one top-level directory called <name>_<version>,
+with info.json at its root. Development files never ship: the tests, the
+offline pipeline, the docs, the wiki source and the CI configuration.
 
-Uses zipfile rather than the zip(1) binary, which is not installed everywhere.
+This uses zipfile and not the zip(1) binary, because not every system has
+zip(1).
 """
 from __future__ import annotations
 
@@ -14,7 +15,7 @@ import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
-# Everything the game needs, and nothing else.
+# Everything that the game needs, and nothing more.
 SHIP = [
     "info.json", "changelog.txt", "thumbnail.png",
     "data.lua", "data-final-fixes.lua", "settings.lua", "control.lua",

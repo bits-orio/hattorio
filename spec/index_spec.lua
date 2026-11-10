@@ -34,8 +34,8 @@ describe("hat index", function()
   end)
 
   it("is stable and never uses lossy float formatting", function()
-    -- the scaffold keyed identity off string.format("%.3f", ...), which is
-    -- %.14g underneath and lossy. Byte packing is exact.
+    -- the scaffold made the identity from string.format("%.3f", ...), which
+    -- uses %.14g and loses precision. Byte packing is exact.
     assert.are.equal(I.encode({ 1, 2 }), I.encode({ 1, 2 }))
     assert.are.equal(2, #I.encode({ 1, 2 }))
   end)

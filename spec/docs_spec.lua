@@ -1,10 +1,10 @@
--- Guards that the documentation still describes the software.
+-- Checks that the documentation still describes the software.
 --
--- Every figure in the docs comes from a measurement, and the defaults have
--- moved twice. Both times the prose kept citing numbers from the previous
--- default, which is invisible until a reader tries to reconcile them. These
--- assertions tie the docs to Config, so a changed default fails the build
--- instead of silently making the README wrong.
+-- Every figure in the docs comes from a measurement, and the defaults changed
+-- twice. Both times the text kept the numbers from the previous default. Nobody
+-- sees that until a reader tries to make the numbers agree. These assertions
+-- tie the docs to Config. So if a default changes, the build fails, and the
+-- README does not become wrong without notice.
 
 local Config = require("mod.config")
 
@@ -37,7 +37,7 @@ describe("documentation", function()
 
   it("quotes the default reusable-blueprint size", function()
     local sq = default.square
-    local pattern = sq .. "×" .. sq          -- README and wiki use an en dash
+    local pattern = sq .. "×" .. sq          -- README and wiki use the sign ×
     local found = false
     for _, path in ipairs(DOCS) do
       if read(path):find(pattern, 1, true) then found = true end
@@ -47,7 +47,8 @@ describe("documentation", function()
   end)
 
   it("does not still present a superseded default as current", function()
-    -- 26/2 and 41/2 were defaults at different points; their figures linger
+    -- 26/2 and 41/2 were the default at different times, and their figures
+    -- can remain in the docs
     local stale = {}
     for _, size in ipairs(Config.SIZE_CHOICES) do
       for _, band in ipairs(Config.BAND_CHOICES) do
@@ -62,8 +63,8 @@ describe("documentation", function()
       for line in text:gmatch("[^\n]+") do
         if line:lower():find("default", 1, true) then
           for _, s in ipairs(stale) do
-            -- a line naming the default must not also quote another
-            -- combination's cell area
+            -- a line that names the default must not also give the cell area
+            -- of another combination
             assert.is_nil(line:find(tostring(s.area) .. " t", 1, true),
               path .. ": a line about the default cites " .. s.area ..
               " tiles, which belongs to a different setting: " .. line)
@@ -74,8 +75,8 @@ describe("documentation", function()
   end)
 
   it("does not claim the square grid is replaced", function()
-    -- Factorio's grid is engine-level. The mod decides where you may build;
-    -- it cannot and does not change the unit of construction.
+    -- Factorio's grid is part of the engine. The mod decides where you may
+    -- build. It cannot change the unit of construction, and it does not.
     for _, path in ipairs({ "README.md", "wiki/Home.md", "info.json",
                             "docs/portal-description.md" }) do
       local text = read(path):lower()
