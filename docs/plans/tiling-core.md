@@ -6,16 +6,25 @@
 > use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A verified Lua library with no dependencies. It generates the "hat"
-aperiodic tiling lazily, in exact integer arithmetic. A Python pipeline
-derives and validates its data.
+aperiodic tiling lazily, with plain doubles. A Python pipeline derives and
+validates its data in exact arithmetic.
 
 **Architecture:** A Python pipeline ports the combinatorial substitution of
 hatviz to exact arithmetic over Q(phi, sqrt3). It validates the tiling that
 results (overlaps, gaps, reflected density, coefficient limits). Then it
-writes Lua data files that contain only integer literals. Six pure Lua
-modules use that data to answer one question: which hats overlap this box?
-The composition path uses no floating point, and no module depends on
-Factorio.
+writes Lua data files that contain doubles, written with `%.17g` so that each
+value round-trips exactly. Four pure Lua modules use that data to answer one
+question: which hats overlap this box? The composition path uses only
+`+ - * /` and `sqrt`, and no module depends on Factorio.
+
+> **Note: this plan changed during implementation.** The first version used
+> exact integers in `Z[phi][sqrt3]` in Lua, and tasks 7 to 10 still show that
+> version: `hat/exact.lua`, `den = 1` and the 24-integer rules. Exact integers
+> stopped the descent at depth 4, so the shipped core uses six plain doubles
+> per transform, and `hat/exact.lua` does not exist. The hat outline also
+> turned out to be a 13-gon, not the 14-gon in tasks 3 and 10. Section 5 and
+> section 14 of the spec give the details. The code in `hat/` and `tools/` is
+> the reference.
 
 **Tech stack:** Python 3.11+ (`fractions`, standard library only), Lua 5.2,
 busted, luassert, luacheck.

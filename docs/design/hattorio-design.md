@@ -1,7 +1,7 @@
 # Hattorio design
 
-Status: draft for review
-Date: 2026-09-19
+Status: describes version 1.0.0
+Date: 2026-11-10 (first draft 2026-09-19)
 
 Hattorio is a Factorio mod. It divides the buildable area of each planet into
 cells of the aperiodic "hat" monotile tiling, with unbuildable bands between
@@ -111,9 +111,9 @@ every cell is the same shape rotated, and only the rasterisation changes.
 
 ## 4. Gameplay rules
 
-- **Bands are unbuildable, but you can walk and drive on them.** The
-  enforcement happens in the script, so no collision mask keeps the player
-  inside a cell.
+- **Bands are unbuildable, but you can walk and drive on them.** Only
+  buildable structures get the band collision layer (section 9), so nothing
+  keeps the player or vehicles inside a cell.
 - **Undergrounds go under bands.** Underground belts and pipes-to-ground
   reach 4 to 10 tiles, so they can cross any band up to 3 wide. This is the
   intended connection between cells and the main source of spaghetti. Every
@@ -305,11 +305,15 @@ explicit and exact, and they contain no phi.
   **Recommendation: two-word arithmetic with the junction at level 6.** This
   gives an unbounded map and sub-tile error, and only `hat/exact.lua` uses
   the wider integers.
+
+  **Superseded.** Section 5 replaced this recommendation. The transforms are
+  now plain doubles, so the mod needs no junction and no two-word integers,
+  and `hat/exact.lua` does not exist.
 - `verify.py` checks for pairwise overlap, finds gaps with a flood fill,
   checks that the reflected density converges, compares the output directly
   with the SVG output of hatviz, and checks the 2^53 coefficient limit.
-- `emit_lua.py` writes the committed Lua data files. They contain only
-  integer literals.
+- `emit_lua.py` writes the committed Lua data files. They contain doubles,
+  written with `%.17g` so that each value round-trips exactly.
 
 The attribution and the BSD-3-Clause notice ship with the mod.
 
@@ -317,17 +321,22 @@ The attribution and the BSD-3-Clause notice ship with the mod.
 
 | Module | Responsibility | Factorio deps |
 | --- | --- | --- |
-| `hat/transform.lua` | affine matrices, six doubles | none |
+| `hat/transform.lua` | affine transforms, six doubles | none |
 | `hat/tiling.lua` | lazy descent, `hats_in_box()` | none |
 | `hat/geometry.lua` | outline, edges, band distance | none |
 | `hat/index.lua` | descent-path identity | none |
-| `hat/surface.lua` | per-surface scale, depth, root offset | storage |
-| `terrain/bands.lua` | chunk -> band tiles | surface API |
-| `build/enforce.lua` | build rejection + whitelist | events |
-| `render/outline.lua` | optional crisp lines | rendering |
+| `mod/config.lua` | settings -> geometry, measured cell stats | none |
+| `mod/bands.lua` | area -> band tiles | none |
+| `mod/surface.lua` | geometry per surface, stored once | settings, storage |
+| `mod/terrain.lua` | paint bands, raise richness, warn | events, surfaces |
+| `mod/outline.lua` | optional line overlay per player | rendering, storage |
+| `mod/commands.lua` | `/hattorio-info` | commands |
+| `prototypes/patch.lua` | band layer on buildable entities | data stage |
 
-The first **five** modules have no Factorio dependencies, and they run under
+The first **six** modules have no Factorio dependencies, and they run under
 plain Lua in CI. The risk is in those modules, and that is where we test it.
+Construction is blocked by the collision layer (section 9), so no runtime
+module enforces it.
 
 ### Functional-core discipline
 
@@ -336,9 +345,9 @@ pure and total functions, explicit data flow, replaceable by value. We got
 there from the determinism constraint, not from the principle. Three rules
 make it explicit:
 
-- **`hat/surface.lua` is pure.** It takes the surface configuration as a
-  parameter and does not read `storage`. `control.lua` does the read, so every
-  side effect is in one of the three modules that talk to Factorio.
+- **`mod/config.lua` is pure.** It takes the setting values as parameters
+  and does not read `settings` or `storage`. `mod/surface.lua` does those
+  reads, so every side effect is in a module that talks to Factorio.
 - **Transform values are immutable.** Lua tables are mutable by reference,
   so this is a discipline and not a guarantee. Every operation returns a new
   table, and no operation changes an argument. A test checks this.
@@ -364,8 +373,9 @@ accumulator in place, for performance. The accumulator is local to
   lakes and their vanilla shore transitions stay.
 - **Ore is already in place** when the event fires. Leave it. The mod raises
   resource richness during map generation to compensate for the cuts. At the
-  default settings a 3x3 drill can reach only about 45% of a patch, so the
-  compensation factor is about 2.2x.
+  default settings (41/3) a 3x3 drill can reach about 61% of a patch, so the
+  compensation factor is about 1.6x. `Config.CELL_STATS` holds the measured
+  fraction for every combination.
 - **The bands are continuous across chunk boundaries** by construction. Each
   chunk derives its bands from the tiling, never from the tiles of its
   neighbours.
@@ -399,19 +409,21 @@ system does the lookup.
 
 ## 10. Visuals
 
-- **Band tiles are the main visual**, with a tint for each planet (dark
-  basalt on Vulcanus, ice on Aquilo, and so on). The custom tiles are copies
-  of a vanilla prototype, so they inherit its transition graphics. Their
-  `walking_speed_modifier` is set to zero.
+- **Band tiles are the main visual.** The custom tiles are copies of
+  `deepwater`, so they inherit its transition graphics. Two startup settings
+  control the look: the style (animated liquid or flat void) and the colour
+  (one of five near-black options). The colour is the same on every planet,
+  so the mod looks like one thing and not like five.
 - **Reflected hats get a slightly different tint** on their own edges. A
   reflected hat paints all 13 of its edges in variant B. Where a reflected hat
   and an unreflected hat share an edge, the reflected hat wins. This is
   deterministic.
 - **Optional crisp outline:** `draw_line` with `draw_on_ground = true`, with
   sub-tile precision. It goes down the centre of the band, so the two match.
-  It is a runtime toggle. It is on by default at large cell sizes and off at
-  small ones. After shared edges are deduplicated, a full screen holds about
-  7k objects at size 20 and about 19k at size 12.
+  It is a setting for each player, and it is off by default. The mod draws it
+  only within 64 tiles of the player and draws it again after the player
+  moves 24 tiles. After shared edges are deduplicated, a full screen would
+  hold about 7k objects at size 20 and about 19k at size 12.
 - We do **not** use `draw_polygon`. It is a triangle strip, not a polygon,
   and it has no `draw_on_ground`, so fills would tint entities.
 
@@ -485,8 +497,6 @@ that broke congruence would fail the build. Callers must give a hat size and
 use `Ti.unit_for_hat_size()`. One manual conversion already made cells at half
 the intended size.
 
-Global at runtime: outline visibility, outline width, outline alpha.
-
 The mod **stores the scale, depth and root offset for each surface when it
 creates the surface**. A later change to a startup setting affects only new
 surfaces. So chunks that already exist never go out of date, and no seam can
@@ -495,10 +505,12 @@ in Hextorio.
 
 ## 12. Storage
 
-Store only what the mod cannot calculate again: the scale, depth and root
-offset for each surface, and the cache of band bitmaps for each chunk. Render
-objects are derived state. `on_configuration_changed` drops them and builds
-them again.
+Store only what the mod cannot calculate again: the geometry for each
+surface (`storage.surfaces`) and the outline render objects for each player
+(`storage.outlines`). The render objects are in `storage` because a module
+local would be lost on load and the objects would leak. The mod needs no band
+bitmap, because the collision system does the lookup (section 9). The tiling
+for each surface is derived state, and the mod builds it again on load.
 
 ## 13. Testing
 
@@ -511,12 +523,13 @@ generative library. We use no static type checker. See
 
 1. **Offline (Python).** Overlap, gaps, density, SVG comparison and the
    coefficient limit. These tests find a sign error before any Lua exists.
-2. **busted, pure Lua, no Factorio.** Property tests of the algebraic laws of
-   the ring (associativity, distributivity, `phi^2 = phi + 1`, agreement with
-   an arbitrary-precision reference), transform composition and unique
-   identities. There are also **golden-file tests**: the pipeline exports the
-   exact set of hats for a known box, and `hat/tiling.lua` must produce the
-   same bytes.
+2. **busted, pure Lua, no Factorio.** Transform composition, unique
+   identities, band rasterisation, settings and the measured cell stats.
+   There are also **golden-file tests**: the pipeline exports the exact set
+   of hats for a known box, and `hat/tiling.lua` must produce the same hats.
+   Further tests check that shipped Lua never uses `math.sin`, `math.cos`,
+   `math.random` or `^`, that the locale files are well formed, and that the
+   docs quote the current defaults.
 3. **In the game.** A visual check, continuous bands across chunk boundaries,
    build rejection (including ghosts and bots), UPS under load, and a smoke
    test for desyncs with two clients.
@@ -591,14 +604,14 @@ to the core.
 
 ## 16. Open items for review
 
-1. **Starting area: decided, no grace area.** At the default 26/2, the spawn
-   cell holds about 347 buildable tiles. That is enough for a burner start.
+1. **Starting area: decided, no grace area.** At the default 41/3, the spawn
+   cell holds about 858 buildable tiles. That is enough for a burner start.
    Bands are walkable, so everything is reachable before underground belts
    arrive. A grace area would weaken the premise exactly where a new player
-   forms an impression. Look at this again first after playtests. Until then,
-   the cell size setting is the escape hatch.
-2. **The default cell size is a guess.** 20/2 comes from reasoning, not from
-   playtests. Expect to tune it.
-3. **The resource compensation factor** (about 2.2x) comes from drill reach at
-   the default settings. It should change with the size setting and not be a
-   constant.
+   forms an impression. The cell size setting is the escape hatch.
+2. **Default cell size: decided, 41/3.** Playtests chose it (section 11).
+   The earlier defaults, 20/2 and then 26/2, were too cramped.
+3. **Resource compensation: decided, measured per combination.** The factor
+   comes from the drill reach in `Config.CELL_STATS` for each size and band.
+   It is about 1.6x at the default settings, and a map setting can override
+   it.

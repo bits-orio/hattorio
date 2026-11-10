@@ -31,8 +31,9 @@ from plan 1.
   desync. `+ - * /` and `sqrt` are safe.
 - **`hat/` must keep zero Factorio dependencies.** New mod code goes in
   `mod/`, never in `hat/`.
-- **Defaults: hat size 26, band width 2**, per planet, as startup settings,
-  with ranges 15-90 and 1-6.
+- **Defaults: hat size 41, band width 3**, per planet, as startup settings.
+  The dropdowns offer sizes 15, 26, 41 and 52 and band widths 1 to 4.
+  `mod/config.lua` still clamps any other value to 15-90 and 1-6.
 - **The mod stores the geometry for each surface when it creates the
   surface.** A later change to the settings must affect only new surfaces.
 - **Bands are permanent.** No technology, item or mechanic removes them.
@@ -335,7 +336,7 @@ git commit -m "feat(mod): band collision layer and per-planet band tiles"
 - Produces (`mod/config.lua`):
   - `Config.MIN_SIZE = 15`, `Config.MAX_SIZE = 90`, `Config.MIN_BAND = 1`,
     `Config.MAX_BAND = 6`
-  - `Config.DEFAULT_SIZE = 26`, `Config.DEFAULT_BAND = 2`
+  - `Config.DEFAULT_SIZE = 41`, `Config.DEFAULT_BAND = 3`
   - `Config.clamp(size, band) -> size, band`
   - `Config.geometry(size, band) -> { size=, band=, unit=, depth=, half= }`
   - `Config.richness_multiplier(size, band) -> number`
@@ -396,9 +397,9 @@ describe("config", function()
     assert.is_true(small < 5.0, "compensation should stay sane")
   end)
 
-  it("defaults to 26 and 2", function()
-    assert.are.equal(26, Config.DEFAULT_SIZE)
-    assert.are.equal(2, Config.DEFAULT_BAND)
+  it("defaults to 41 and 3", function()
+    assert.are.equal(41, Config.DEFAULT_SIZE)
+    assert.are.equal(3, Config.DEFAULT_BAND)
   end)
 end)
 ```
@@ -422,7 +423,7 @@ local Config = {}
 
 Config.MIN_SIZE, Config.MAX_SIZE = 15, 90
 Config.MIN_BAND, Config.MAX_BAND = 1, 6
-Config.DEFAULT_SIZE, Config.DEFAULT_BAND = 26, 2
+Config.DEFAULT_SIZE, Config.DEFAULT_BAND = 41, 3
 
 -- The map is 2e6 x 2e6, so its half-diagonal is ~1.41e6. coverage() is a
 -- circumradius of a hexagonal root, so a square region inscribed in it is not
@@ -487,7 +488,7 @@ for planet, _ in pairs(planets) do
     type = "int-setting",
     name = "hattorio-hat-size-" .. planet,
     setting_type = "startup",
-    default_value = 26,
+    default_value = 41,
     minimum_value = 15,
     maximum_value = 90,
     order = string.format("a[size]-%02d[%s]", order, planet),
@@ -496,7 +497,7 @@ for planet, _ in pairs(planets) do
     type = "int-setting",
     name = "hattorio-band-width-" .. planet,
     setting_type = "startup",
-    default_value = 2,
+    default_value = 3,
     minimum_value = 1,
     maximum_value = 6,
     order = string.format("b[band]-%02d[%s]", order, planet),
@@ -691,11 +692,11 @@ return Surface
 - [ ] **Step 2: In-game check**
 
 1. Start a new game. `/c game.print(serpent.line(storage.surfaces))` shows an
-   entry for Nauvis with `size = 26`, `band = 2` and a `depth`.
-2. Quit, change the cell size setting to 41 and load the **same save** again.
-   `storage.surfaces` still shows 26, because existing surfaces keep their
+   entry for Nauvis with `size = 41`, `band = 3` and a `depth`.
+2. Quit, change the cell size setting to 26 and load the **same save** again.
+   `storage.surfaces` still shows 41, because existing surfaces keep their
    geometry.
-3. Create a new surface (or a new game). It shows 41.
+3. Create a new surface (or a new game). It shows 26.
 
 - [ ] **Step 3: Commit**
 
@@ -1061,11 +1062,11 @@ Then call it from the `on_chunk_generated` handler, after `paint_chunk`:
 
 - [ ] **Step 2: In-game check**
 
-1. Start a new game at cell size 26. Hover over an iron patch and note the
-   amount per tile.
+1. Start a new game at the default settings (41/3). Hover over an iron patch
+   and note the amount per tile.
 2. Start a new game with the mod disabled and the same map seed. At this
-   setting, the vanilla amount should be about `1 / 2.5` of the modded
-   amount.
+   setting, the vanilla amount should be about `0.61` of the modded amount
+   (the drillable fraction for 41/3 in `Config.CELL_STATS`).
 3. The mod does **not** multiply infinite resources (crude oil). Their yield
    is a percentage, and it would be wrong to scale it.
 
@@ -1214,7 +1215,7 @@ at the smallest cell sizes the overlay costs up to about 19k render objects on
 the screen. YAGNI: ship without it, and add it if anyone asks.
 
 **No grace area at spawn** (design section 16 left this open). At the default
-26/2, the spawn cell holds about 347 buildable tiles. That is easily enough
+41/3, the spawn cell holds about 858 buildable tiles. That is easily enough
 for a burner start. Bands are walkable, so everything is reachable before
 underground belts arrive. A grace area would also weaken the premise exactly
 where a new player forms an impression of the mod. Decision: no grace area.
