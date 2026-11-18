@@ -9,9 +9,13 @@ in Python.
 On a fresh clone, run `make setup` once. It installs the npm tools and turns
 on the git hook.
 
-- `make fast` runs before each commit, through the git hook: the version
-  check, the quick Python tests, busted under Lua 5.2, luacheck,
-  markdownlint and the internal links. It must stay under about 10 seconds.
+- `make fast` runs before each commit, through the git hook. It runs the
+  version check, the quick Python tests, busted under Lua 5.2 and luacheck.
+  It also runs markdownlint, the internal links and the prose check. It must
+  stay under about 10 seconds.
+- `make text` is the prose check. It reads Markdown, the locale file and the
+  comments of the code. Fix the text when it fails. Add an entry to
+  `.ste-allow` only for a false positive, and give the reason.
 - `make check` runs before a PR. It adds the slow offline pipeline tests and
   the in-game tests in the Factorio headless server, with and without Space
   Age.
@@ -24,7 +28,15 @@ rules, the changelog and the release workflow.
 - Write all prose in British English: Markdown, code comments, docstrings and
   commit messages.
 - Use the /ste80-humanizer skill for new prose and for commit messages.
-- In `mod-description-long.md`, keep the author's first-person voice.
+- Write in the tone of the reference project (`README.md` and
+  `docs/design.md` there). It is plain and dry. Say what the mod does, and
+  give the numbers.
+- Address the player as "you". Do not write "I" or "we": name who acts, such
+  as the mod, the pipeline or a test.
+- Do not sell. Do not stage a point, and do not end on a punchline. The
+  subject can be funny, but the sentences stay flat.
+- Use bold only for a label at the start of a paragraph or a list item, and
+  for a warning. Do not use bold for emphasis inside a sentence.
 
 ## Skills
 
