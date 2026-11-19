@@ -66,6 +66,24 @@ test("the interface refuses a planet that the mod does not know", function()
   game.delete_surface(other)
 end)
 
+-- The game deletes a surface at the end of the tick, and it can give the
+-- index to the next new surface. That surface must start with nothing.
+test("the mod forgets a deleted surface", function()
+  local first = game.create_surface("a-short-lived-surface")
+  local index = first.index
+  assert(remote.call("hattorio", "set_surface_planet", index, "nauvis"))
+  game.delete_surface(first)
+  after_ticks(2, function()
+    assert(game.get_surface(index) == nil, "the surface still exists")
+    assert(not (storage.surfaces and storage.surfaces[index]), "the geometry stays")
+    assert(not (storage.assigned and storage.assigned[index]), "the planet stays")
+    local second = game.create_surface("the-next-surface")
+    assert(not Surface.is_tiled(second),
+      "a new surface is tiled, with index " .. second.index .. " after " .. index)
+    game.delete_surface(second)
+  end)
+end)
+
 test("a surface keeps the planet that it has", function()
   local copy = team_copy()
   assert(remote.call("hattorio", "set_surface_planet", copy.index, "nauvis"))

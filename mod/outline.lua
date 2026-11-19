@@ -110,4 +110,9 @@ function Outline.reset()
   tilings = {}
 end
 
+--- Drop the tiling of a surface that the game deleted.
+function Outline.forget(index)
+  tilings[index] = nil
+end
+
 return Outline

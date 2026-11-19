@@ -23,6 +23,9 @@ This is the only changelog that people edit. The build makes Factorio's
 
 - A chunk that another mod filled with a copy of a tiled chunk got its ore
   richness raised a second time, when the game called that mod first.
+- A new surface could get the geometry of a deleted surface. The game gives
+  the index of a deleted surface to a new one, and the mod kept the geometry
+  for the index.
 
 ## [1.0.2] - 2026-11-18
 

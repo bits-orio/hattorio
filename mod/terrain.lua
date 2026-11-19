@@ -156,6 +156,14 @@ script.on_event(defines.events.on_surface_created, function(event)
   if surface then Surface.init(surface) end
 end)
 
+-- The game can give the index of a deleted surface to a new one, so nothing
+-- that the mod keeps for the index may stay.
+script.on_event(defines.events.on_surface_deleted, function(event)
+  Surface.forget(event.surface_index)
+  tilings[event.surface_index] = nil
+  Outline.forget(event.surface_index)
+end)
+
 script.on_nth_tick(30, function()
   for _, player in pairs(game.connected_players) do
     Outline.refresh(player)

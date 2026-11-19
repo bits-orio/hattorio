@@ -145,6 +145,15 @@ function Surface.assign(surface, planet)
   return true
 end
 
+--- Forget a surface that the game deleted.
+--
+-- The game can give the index of a deleted surface to a new one. Without
+-- this, the new surface would get the planet and the geometry of the old one.
+function Surface.forget(index)
+  if storage.surfaces then storage.surfaces[index] = nil end
+  if storage.assigned then storage.assigned[index] = nil end
+end
+
 --- The planet whose tiling this surface has, or nil.
 Surface.planet_of = planet_of
 
