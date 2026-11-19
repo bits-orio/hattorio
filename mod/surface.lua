@@ -9,6 +9,7 @@
 
 local Config = require("mod.config")
 local planets = require("mod.planets")
+local Copies = require("mod.copies")
 
 local Surface = {}
 
@@ -20,6 +21,25 @@ local function planet_of(surface)
   -- vanilla terrain.
   if surface.platform then return nil end
   if planets[surface.name] then return surface.name end
+  -- A team's copy of a planet in Multi-Team Support has the palette of that
+  -- planet.
+  local original = Copies.planet_of(surface.name)
+  if original and planets[original] then return original end
+  return nil
+end
+
+--- The geometry that another surface of the same planet already has, or nil.
+--
+-- Every copy of a planet must have the same cells as the planet. A startup
+-- setting can change between the creation of two copies, so a copy takes the
+-- stored geometry and does not read the settings again.
+local function shared_geometry(surface, planet)
+  if surface.name == planet then return nil end
+  local original = game.surfaces[planet]
+  if original then return Surface.get(original) end
+  for index, g in pairs(storage.surfaces) do
+    if g.planet == planet and game.surfaces[index] then return g end
+  end
   return nil
 end
 
@@ -44,6 +64,14 @@ function Surface.init(surface)
   storage.surfaces = storage.surfaces or {}
   local existing = storage.surfaces[surface.index]
   if existing then return existing end
+
+  local shared = shared_geometry(surface, planet)
+  if shared then
+    storage.surfaces[surface.index] = shared
+    log(string.format("hattorio: %s initialised with the geometry of %s",
+      surface.name, planet))
+    return shared
+  end
 
   local g = Config.geometry(
     read_number_setting("hattorio-hat-size-" .. planet, Config.DEFAULT_SIZE),

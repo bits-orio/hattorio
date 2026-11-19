@@ -8,6 +8,7 @@ local Ti = require("hat.tiling")
 local Surface = require("mod.surface")
 local Bands = require("mod.bands")
 local Outline = require("mod.outline")
+local Copies = require("mod.copies")
 
 -- Derived state, keyed by surface index. It is deliberately NOT in storage.
 -- The mod can build it again from the stored geometry, and a tiling holds
@@ -87,12 +88,66 @@ local function compensate_resources(surface, area)
   end
 end
 
-script.on_event(defines.events.on_chunk_generated, function(event)
+-- The chunks that received a copy of a tiled chunk in this tick.
+--
+-- Multi-Team Support fills each new chunk of a team's Nauvis with a copy of
+-- the same chunk of the real Nauvis. The copy already has the bands and the
+-- raised ore. If the mod handled the chunk again, it would raise the ore a
+-- second time.
+--
+-- The copy and the chunk event are in the same tick, and the order of the
+-- two depends on the order in which the game loads the mods. If the chunk
+-- event is first, the copy replaces what the mod did. If the copy is first,
+-- this record tells the chunk event to leave the chunk alone. The record is
+-- in `storage`, so that every client has the same one.
+local function chunk_key(surface, position)
+  return surface.index .. ":" .. position.x .. ":" .. position.y
+end
+
+local function same_area(a, b)
+  return a.left_top.x == b.left_top.x and a.left_top.y == b.left_top.y
+    and a.right_bottom.x == b.right_bottom.x
+    and a.right_bottom.y == b.right_bottom.y
+end
+
+local function on_area_cloned(event)
+  if not (event.clone_tiles and event.clone_entities) then return end
+  -- The cells depend on the position. So the copy has the correct bands only
+  -- if it is at the same position, on a surface with the same geometry.
+  if not same_area(event.source_area, event.destination_area) then return end
+  local destination = event.destination_surface
+  local g, source = Surface.get(destination), Surface.get(event.source_surface)
+  if not (g and source) then return end
+  if g.size ~= source.size or g.band ~= source.band then return end
+
+  local copied = storage.copied
+  if not copied or copied.tick ~= event.tick then
+    copied = { tick = event.tick, chunks = {} }
+    storage.copied = copied
+  end
+  local area = event.destination_area
+  local chunks = Copies.chunks_in(area.left_top, area.right_bottom)
+  for i = 1, #chunks do
+    copied.chunks[chunk_key(destination, chunks[i])] = true
+  end
+end
+
+local function is_copy(event)
+  local copied = storage.copied
+  return copied ~= nil and copied.tick == event.tick
+    and copied.chunks[chunk_key(event.surface, event.position)] == true
+end
+
+local function on_chunk_generated(event)
   if not Surface.is_tiled(event.surface) then return end
+  if is_copy(event) then return end
   local area = area_of(event.area)
   paint_chunk(event.surface, area)
   compensate_resources(event.surface, area)
-end)
+end
+
+script.on_event(defines.events.on_area_cloned, on_area_cloned)
+script.on_event(defines.events.on_chunk_generated, on_chunk_generated)
 
 script.on_event(defines.events.on_surface_created, function(event)
   local surface = game.surfaces[event.surface_index]
@@ -152,3 +207,6 @@ script.on_configuration_changed(function(data)
   Outline.reset()
   warn_if_added_mid_save(data)
 end)
+
+-- For the in-game tests, which call the chunk handler directly.
+return { on_chunk_generated = on_chunk_generated }

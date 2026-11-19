@@ -9,5 +9,6 @@ if script.active_mods["factorio-test"] then
     "tests/ingame/smoke_test",
     "tests/ingame/bands_test",
     "tests/ingame/collision_test",
+    "tests/ingame/copies_test",
   })
 end

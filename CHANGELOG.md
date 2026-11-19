@@ -11,6 +11,15 @@ This is the only changelog that people edit. The build makes Factorio's
 
 ## [Unreleased]
 
+### Added
+
+- Hattorio works with
+  [Multi-Team Support](https://mods.factorio.com/mod/multi-team-support).
+  Each team's copy of a planet gets the cells of that planet, so all teams
+  build on the same floor plan. Before, a team's Vulcanus, Fulgora, Gleba
+  and Aquilo had no bands. `/hattorio-info` and the band outline did not
+  work on a team's surface.
+
 ## [1.0.2] - 2026-11-18
 
 ### Fixed
