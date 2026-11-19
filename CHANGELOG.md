@@ -16,7 +16,7 @@ This is the only changelog that people edit. The build makes Factorio's
 - Another mod can give a surface the cells of a planet, through the remote
   interface `hattorio`. A mod that gives each team its own copy of a planet
   can use it, so that all teams build on the same floor plan.
-  [The design document](docs/design/hattorio-design.md#8-terrain) describes
+  [The design document](docs/design/hattorio-design.md#8-terrain-generation) describes
   the interface.
 
 ### Fixed
