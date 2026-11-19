@@ -10,6 +10,7 @@
 --
 -- The surface then gets the cells and the settings of that planet. Make the
 -- call when you create the surface, before its first chunk generates.
+-- Chunks that exist already keep their ground.
 
 local Surface = require("mod.surface")
 
@@ -19,7 +20,17 @@ local function surface_of(id)
   return game.get_surface(id)
 end
 
+-- The interface is a public contract. Other mods call it, so a call keeps
+-- its name and its arguments. Each change that a caller can see raises the
+-- version.
+local VERSION = 1
+
 remote.add_interface("hattorio", {
+  --- The version of this interface. A caller can check it before a call.
+  interface_version = function()
+    return VERSION
+  end,
+
   --- Give a surface the tiling of a planet.
   -- @param surface  the index or the name of the surface
   -- @param planet   nauvis, vulcanus, fulgora, gleba or aquilo
@@ -34,6 +45,6 @@ remote.add_interface("hattorio", {
   -- the surface.
   get_surface_planet = function(surface)
     surface = surface_of(surface)
-    return surface and Surface.planet_of(surface) or nil
+    return surface and Surface.planet_of(surface)
   end,
 })

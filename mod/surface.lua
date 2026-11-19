@@ -32,6 +32,11 @@ end
 -- planet. A startup setting can change between the creation of two such
 -- surfaces, so a later one takes the stored geometry and does not read the
 -- settings again.
+--
+-- One gap stays. In Space Age, a copy of Vulcanus can exist before the real
+-- Vulcanus. The copy then reads the settings, and the real planet reads them
+-- again when the game creates it. If a startup setting changes between these
+-- two sessions, the two surfaces get different cells.
 local function shared_geometry(surface, planet)
   if surface.name == planet then return nil end
   local original = game.surfaces[planet]
@@ -132,13 +137,18 @@ end
 -- Other mods call this through the remote interface (`mod/interface.lua`). A
 -- mod that makes more than one surface for a planet, such as one surface for
 -- each team, calls it when it creates the surface. Chunks that exist already
--- keep their ground, so the call must come before the first chunk.
+-- keep their ground. The real planets act the same way when a player adds
+-- the mod to a save: new chunks get bands, and old chunks stay vanilla.
 --
 -- @return true if the surface has the tiling of this planet after the call
 function Surface.assign(surface, planet)
   if surface.platform or not planets[planet] then return false end
   local current = planet_of(surface)
   if current then return current == planet end
+  if surface.is_chunk_generated({ 0, 0 }) then
+    log(string.format("hattorio: %s gets the cells of %s, but it has chunks " ..
+      "already. Those chunks keep their ground.", surface.name, planet))
+  end
   storage.assigned = storage.assigned or {}
   storage.assigned[surface.index] = planet
   Surface.init(surface)

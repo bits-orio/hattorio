@@ -51,6 +51,23 @@ test("a surface gets the geometry of the planet that a mod gives it", function()
   assert(remote.call("hattorio", "get_surface_planet", copy.name) == "nauvis")
 end)
 
+test("the interface has version 1", function()
+  assert(remote.call("hattorio", "interface_version") == 1)
+end)
+
+-- A mod can make the call for a surface that has chunks already, for
+-- example when a player adds this mod to a save. New chunks get bands, as on
+-- a real planet in such a save.
+test("the interface accepts a surface that has chunks already", function()
+  local other = game.create_surface("a-surface-with-chunks")
+  other.request_to_generate_chunks({ 0, 0 }, 0)
+  other.force_generate_chunk_requests()
+  assert(remote.call("hattorio", "set_surface_planet", other.index, "nauvis"),
+    "the interface refused a surface with chunks")
+  assert(Surface.is_tiled(other), "the surface is not tiled")
+  game.delete_surface(other)
+end)
+
 test("a surface that no mod gave a planet is not tiled", function()
   local other = game.create_surface("another-surface")
   assert(not Surface.is_tiled(other), "the surface is tiled")

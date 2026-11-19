@@ -9,18 +9,20 @@ local Surface = require("mod.surface")
 local Bands = require("mod.bands")
 local Outline = require("mod.outline")
 
--- Derived state, keyed by surface index. It is deliberately NOT in storage.
--- The mod can build it again from the stored geometry, and a tiling holds
--- closures.
-local tilings = {}
+-- Derived state, keyed by the geometry table. It is deliberately NOT in
+-- storage. The mod can build it again from the stored geometry, and a tiling
+-- holds closures. All surfaces of one planet share one geometry, so they
+-- share one tiling. The keys are weak, so the tiling of a deleted surface
+-- goes away with its geometry.
+local tilings = setmetatable({}, { __mode = "k" })
 
 local function tiling_for(surface)
   local g = Surface.get(surface)
   if not g then return nil, nil end
-  local t = tilings[surface.index]
+  local t = tilings[g]
   if not t then
     t = Ti.new({ unit = g.unit, depth = g.depth })
-    tilings[surface.index] = t
+    tilings[g] = t
   end
   return t, g
 end
@@ -118,7 +120,9 @@ local function on_area_cloned(event)
   local destination = event.destination_surface
   local g, source = Surface.get(destination), Surface.get(event.source_surface)
   if not (g and source) then return end
-  if g.size ~= source.size or g.band ~= source.band then return end
+  if g.planet ~= source.planet or g.size ~= source.size or g.band ~= source.band then
+    return
+  end
 
   local copied = storage.copied
   if not copied or copied.tick ~= event.tick then
@@ -136,8 +140,13 @@ end
 
 local function is_copy(event)
   local copied = storage.copied
-  return copied ~= nil and copied.tick == event.tick
-    and copied.chunks[chunk_key(event.surface, event.position)] == true
+  if not copied then return false end
+  if copied.tick ~= event.tick then
+    -- The record is for one tick only. Drop it, so the save does not keep it.
+    storage.copied = nil
+    return false
+  end
+  return copied.chunks[chunk_key(event.surface, event.position)] == true
 end
 
 local function on_chunk_generated(event)
@@ -157,11 +166,10 @@ script.on_event(defines.events.on_surface_created, function(event)
 end)
 
 -- The game can give the index of a deleted surface to a new one, so nothing
--- that the mod keeps for the index may stay.
+-- that the mod keeps for the index may stay. The tiling caches use the
+-- geometry as the key, so they need no cleanup here.
 script.on_event(defines.events.on_surface_deleted, function(event)
   Surface.forget(event.surface_index)
-  tilings[event.surface_index] = nil
-  Outline.forget(event.surface_index)
 end)
 
 script.on_nth_tick(30, function()
@@ -182,7 +190,7 @@ end)
 
 -- Derived state only. The mod builds it again when it next needs it.
 script.on_load(function()
-  tilings = {}
+  tilings = setmetatable({}, { __mode = "k" })
   Outline.reset()
 end)
 
@@ -213,7 +221,7 @@ local function warn_if_added_mid_save(data)
 end
 
 script.on_configuration_changed(function(data)
-  tilings = {}
+  tilings = setmetatable({}, { __mode = "k" })
   Outline.reset()
   warn_if_added_mid_save(data)
 end)
