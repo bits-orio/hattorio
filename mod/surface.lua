@@ -9,7 +9,6 @@
 
 local Config = require("mod.config")
 local planets = require("mod.planets")
-local Copies = require("mod.copies")
 
 local Surface = {}
 
@@ -21,18 +20,18 @@ local function planet_of(surface)
   -- vanilla terrain.
   if surface.platform then return nil end
   if planets[surface.name] then return surface.name end
-  -- A team's copy of a planet in Multi-Team Support has the palette of that
-  -- planet.
-  local original = Copies.planet_of(surface.name)
-  if original and planets[original] then return original end
-  return nil
+  -- Another mod can give a surface the palette of a planet. See
+  -- Surface.assign.
+  local assigned = storage.assigned
+  return assigned and assigned[surface.index] or nil
 end
 
 --- The geometry that another surface of the same planet already has, or nil.
 --
--- Every copy of a planet must have the same cells as the planet. A startup
--- setting can change between the creation of two copies, so a copy takes the
--- stored geometry and does not read the settings again.
+-- Every surface with the palette of a planet must have the same cells as the
+-- planet. A startup setting can change between the creation of two such
+-- surfaces, so a later one takes the stored geometry and does not read the
+-- settings again.
 local function shared_geometry(surface, planet)
   if surface.name == planet then return nil end
   local original = game.surfaces[planet]
@@ -127,6 +126,27 @@ function Surface.richness(g)
   end
   return Config.richness_multiplier(g.size, g.band), "automatic"
 end
+
+--- Give a surface the tiling of a planet.
+--
+-- Other mods call this through the remote interface (`mod/interface.lua`). A
+-- mod that makes more than one surface for a planet, such as one surface for
+-- each team, calls it when it creates the surface. Chunks that exist already
+-- keep their ground, so the call must come before the first chunk.
+--
+-- @return true if the surface has the tiling of this planet after the call
+function Surface.assign(surface, planet)
+  if surface.platform or not planets[planet] then return false end
+  local current = planet_of(surface)
+  if current then return current == planet end
+  storage.assigned = storage.assigned or {}
+  storage.assigned[surface.index] = planet
+  Surface.init(surface)
+  return true
+end
+
+--- The planet whose tiling this surface has, or nil.
+Surface.planet_of = planet_of
 
 function Surface.get(surface)
   storage.surfaces = storage.surfaces or {}

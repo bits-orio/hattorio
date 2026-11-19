@@ -1,6 +1,6 @@
--- Multi-Team Support gives each team a surface of its own for each planet,
--- and names it after the planet. These tests make such surfaces by hand, so
--- they run without that mod. The busted suite tests the names.
+-- Another mod can give a surface the tiling of a planet, through the remote
+-- interface. A mod that gives each team a surface of its own does this. These
+-- tests make such a surface by hand.
 
 local Surface = require("mod.surface")
 local Terrain = require("mod.terrain")
@@ -34,25 +34,47 @@ local function chunk_event(surface)
 end
 
 local function team_copy()
-  local nauvis = game.surfaces["nauvis"]
-  return game.surfaces["team-1-nauvis"]
-    or game.create_surface("team-1-nauvis", nauvis.map_gen_settings)
+  local copy = game.surfaces["nauvis-of-team-1"]
+  if not copy then
+    copy = game.create_surface("nauvis-of-team-1", game.surfaces["nauvis"].map_gen_settings)
+    assert(remote.call("hattorio", "set_surface_planet", copy.index, "nauvis"),
+      "the interface refused the surface")
+  end
+  return copy
 end
 
-test("a team's copy of nauvis has the geometry of nauvis", function()
+test("a surface gets the geometry of the planet that a mod gives it", function()
   local copy = team_copy()
   assert(Surface.is_tiled(copy), "the copy is not tiled")
   assert(Surface.get(copy) == Surface.get(game.surfaces["nauvis"]),
     "the copy has a geometry of its own")
+  assert(remote.call("hattorio", "get_surface_planet", copy.name) == "nauvis")
 end)
 
-test("a surface with a similar name is not tiled", function()
-  local other = game.create_surface("team-nauvis")
-  assert(not Surface.is_tiled(other), "team-nauvis is tiled")
+test("a surface that no mod gave a planet is not tiled", function()
+  local other = game.create_surface("another-surface")
+  assert(not Surface.is_tiled(other), "the surface is tiled")
+  assert(remote.call("hattorio", "get_surface_planet", other.index) == nil)
   game.delete_surface(other)
 end)
 
-test("a new chunk on a team's copy gets bands", function()
+test("the interface refuses a planet that the mod does not know", function()
+  local other = game.create_surface("a-third-surface")
+  assert(not remote.call("hattorio", "set_surface_planet", other.index, "pluto"))
+  assert(not remote.call("hattorio", "set_surface_planet", "no-such-surface", "nauvis"))
+  assert(not Surface.is_tiled(other), "the surface is tiled")
+  game.delete_surface(other)
+end)
+
+test("a surface keeps the planet that it has", function()
+  local copy = team_copy()
+  assert(remote.call("hattorio", "set_surface_planet", copy.index, "nauvis"))
+  assert(not remote.call("hattorio", "set_surface_planet", copy.index, "vulcanus"))
+  assert(not remote.call("hattorio", "set_surface_planet", "nauvis", "vulcanus"))
+  assert(remote.call("hattorio", "get_surface_planet", copy.index) == "nauvis")
+end)
+
+test("a new chunk on such a surface gets bands", function()
   local copy = team_copy()
   generate(copy)
   after_ticks(1, function()
@@ -60,9 +82,9 @@ test("a new chunk on a team's copy gets bands", function()
   end)
 end)
 
--- Multi-Team Support copies each chunk of nauvis to the same chunk of the
--- team's surface. The copy has the bands and the raised ore already. The
--- chunk event of the same tick must not raise the ore again.
+-- A mod can copy each chunk of nauvis to the same chunk of its own surface.
+-- The copy has the bands and the raised ore already. The chunk event of the
+-- same tick must not raise the ore again.
 test("a chunk that is a copy of a nauvis chunk keeps its ore", function()
   local nauvis, copy = game.surfaces["nauvis"], team_copy()
   generate(nauvis)

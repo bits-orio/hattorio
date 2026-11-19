@@ -8,7 +8,6 @@ local Ti = require("hat.tiling")
 local Surface = require("mod.surface")
 local Bands = require("mod.bands")
 local Outline = require("mod.outline")
-local Copies = require("mod.copies")
 
 -- Derived state, keyed by surface index. It is deliberately NOT in storage.
 -- The mod can build it again from the stored geometry, and a tiling holds
@@ -90,14 +89,15 @@ end
 
 -- The chunks that received a copy of a tiled chunk in this tick.
 --
--- Multi-Team Support fills each new chunk of a team's Nauvis with a copy of
--- the same chunk of the real Nauvis. The copy already has the bands and the
--- raised ore. If the mod handled the chunk again, it would raise the ore a
--- second time.
+-- A mod can fill a new chunk of one surface with a copy of the same chunk of
+-- another surface (`LuaSurface.clone_area`). A mod that gives each team a
+-- copy of a planet does this. The copy already has the bands and the raised
+-- ore. If this mod handled the chunk again, it would raise the ore a second
+-- time.
 --
 -- The copy and the chunk event are in the same tick, and the order of the
 -- two depends on the order in which the game loads the mods. If the chunk
--- event is first, the copy replaces what the mod did. If the copy is first,
+-- event is first, the copy replaces what this mod did. If the copy is first,
 -- this record tells the chunk event to leave the chunk alone. The record is
 -- in `storage`, so that every client has the same one.
 local function chunk_key(surface, position)
@@ -125,10 +125,12 @@ local function on_area_cloned(event)
     copied = { tick = event.tick, chunks = {} }
     storage.copied = copied
   end
-  local area = event.destination_area
-  local chunks = Copies.chunks_in(area.left_top, area.right_bottom)
-  for i = 1, #chunks do
-    copied.chunks[chunk_key(destination, chunks[i])] = true
+  -- Every chunk that the area covers completely.
+  local lt, rb = event.destination_area.left_top, event.destination_area.right_bottom
+  for cy = math.ceil(lt.y / 32), math.floor(rb.y / 32) - 1 do
+    for cx = math.ceil(lt.x / 32), math.floor(rb.x / 32) - 1 do
+      copied.chunks[chunk_key(destination, { x = cx, y = cy })] = true
+    end
   end
 end
 

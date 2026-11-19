@@ -297,12 +297,12 @@ The attribution and the BSD-3-Clause notice ship with the mod.
 | `mod/config.lua` | settings -> geometry, measured cell stats | none |
 | `mod/bands.lua` | area -> band tiles | none |
 | `mod/planets.lua` | the set of surfaces that get bands | none |
-| `mod/copies.lua` | the planet that a team's surface is a copy of | none |
 | `mod/colours.lua` | the band colour options | none |
 | `mod/surface.lua` | geometry per surface, stored once | settings, storage |
 | `mod/terrain.lua` | paint bands, raise richness, warn | events, surfaces |
 | `mod/outline.lua` | optional line overlay per player | rendering, storage |
 | `mod/commands.lua` | `/hattorio-info` | commands |
+| `mod/interface.lua` | the remote interface for other mods | remote |
 | `prototypes/settings.lua` | the settings | settings stage |
 | `prototypes/collision.lua` | the `hattorio_band` layer | data stage |
 | `prototypes/tiles.lua` | the band tiles | data stage, settings |
@@ -357,13 +357,18 @@ the descent changes it.
 - **Only the five vanilla planets get bands.** `mod/planets.lua` lists
   nauvis, vulcanus, fulgora, gleba and aquilo. Space platforms and planets
   from other mods keep vanilla terrain.
-- **A team's copy of a planet gets the cells of the planet.** Multi-Team
-  Support gives each team a surface of its own for each planet, with the
-  name `mts-<planet>-<N>` or `team-<N>-<planet>`. `mod/copies.lua` reads the
-  planet from the name, and the copy takes the stored geometry of the
-  planet. That mod fills a team's Nauvis with copies of the chunks of the
-  real Nauvis. The game reports each copy in `on_area_cloned`, and the mod
-  leaves a copied chunk alone, so its ore richness goes up only once.
+- **Another mod can give a surface the cells of a planet.** A mod that
+  makes more than one surface for a planet, such as one surface for each
+  team, calls the remote interface when it creates the surface:
+  `remote.call("hattorio", "set_surface_planet", surface.index, "nauvis")`.
+  The call returns true if the surface has the tiling of that planet. The
+  surface takes the stored geometry of the planet, so all its copies have
+  the same cells. `mod/interface.lua` also has `get_surface_planet`, which
+  returns the planet of a surface, or nil.
+- **A copied chunk keeps its ore.** A mod can fill a chunk with a copy of
+  the same chunk of another tiled surface. The game reports each copy in
+  `on_area_cloned`, and the mod leaves that chunk alone, so its ore richness
+  goes up only once.
 
 ## 9. Build enforcement
 
